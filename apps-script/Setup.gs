@@ -22,6 +22,11 @@ function onOpen() {
     .addSeparator()
     .addItem('Clear All Data', 'clearAllData')
     .addSeparator()
+    .addSubMenu(ui.createMenu('Tests')
+      .addItem('Run All Tests', 'runAllTests')
+      .addItem('Run Quick Tests', 'runQuickTests')
+      .addItem('Cleanup Test Sheets', 'cleanupTestSheets'))
+    .addSeparator()
     .addItem('About', 'showAbout')
     .addToUi();
 }

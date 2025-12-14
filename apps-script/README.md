@@ -19,10 +19,11 @@ Copy the contents of these files into your Apps Script project:
 
 #### Current Files (MVP 1):
 - **Setup.gs** - Main setup script (Issue #1)
-
-#### Coming Soon:
 - **Validation.gs** - Data validation helpers (Issue #2)
 - **SampleData.gs** - Sample data generation (Issue #4)
+- **Tests.gs** - Automated unit tests
+
+#### Coming Soon (MVP 2+):
 - **Config.gs** - Configuration helpers (MVP 2)
 - **DataAccess.gs** - Database operations (MVP 2)
 - **Appointments.gs** - Appointment functions (MVP 2)
@@ -63,8 +64,17 @@ After setup, you'll see a new menu in Google Sheets:
 
 ```
 Appointment System
-├── Initialize System  (Re-run setup if needed)
-└── About             (Show version info)
+├── Initialize System       (Re-run setup if needed)
+├── Add Sample Data        (Populate test data)
+├── ──────────────
+├── Clear All Data         (Remove all data, keep structure)
+├── ──────────────
+├── Tests                  (Automated testing)
+│   ├── Run All Tests      (Full test suite ~60 sec)
+│   ├── Run Quick Tests    (Essential tests ~15 sec)
+│   └── Cleanup Test Sheets (Remove leftover test sheets)
+├── ──────────────
+└── About                  (Show version info)
 ```
 
 ## File Descriptions
@@ -202,8 +212,92 @@ To change sheet structure:
 3. **Warning**: This deletes existing data!
 4. For production, write migration script instead
 
+## Testing
+
+### Running Tests
+
+The system includes automated tests to verify functionality:
+
+**Run All Tests** (recommended after setup):
+1. Click **Appointment System → Tests → Run All Tests**
+2. Wait 30-60 seconds
+3. View results in dialog
+
+**Tests included:**
+- ✅ Sheet creation and deletion
+- ✅ Header formatting (bold, blue, frozen)
+- ✅ Auto-increment ID formulas
+- ✅ Email validation
+- ✅ Phone validation
+- ✅ Date validation
+- ✅ Time validation
+- ✅ Dropdown validation
+- ✅ Number validation
+- ✅ Sample data presence
+
+**Quick Tests** (faster smoke test):
+- Click **Appointment System → Tests → Run Quick Tests**
+- Runs 3 essential tests in ~15 seconds
+- Good for quick verification
+
+**Cleanup Test Sheets:**
+- Tests create temporary sheets (named "Test...")
+- These are auto-deleted after each test
+- Use **Cleanup Test Sheets** if any get left behind
+
+### Test Results
+
+Tests display results in a dialog showing:
+- ✅ Number passed
+- ❌ Number failed
+- Detailed error messages for failures
+
+All test results are also logged to the Apps Script console:
+1. Apps Script editor → **View → Logs**
+2. Or use `Logger.log()` output
+
+### Writing New Tests
+
+To add new tests, edit `Tests.gs`:
+
+```javascript
+function testMyNewFeature() {
+  const testName = 'My New Feature';
+
+  try {
+    // Create test sheet
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const testSheet = ss.insertSheet('TestMyFeature_' + Date.now());
+
+    // Run your test
+    // ... test code here ...
+
+    // Cleanup
+    ss.deleteSheet(testSheet);
+
+    return {
+      name: testName,
+      passed: true,  // or false
+      message: 'Test passed!'  // or error message
+    };
+  } catch (error) {
+    return {
+      name: testName,
+      passed: false,
+      message: `Error: ${error.toString()}`
+    };
+  }
+}
+```
+
+Then add it to `runAllTests()`:
+```javascript
+results.push(testMyNewFeature());
+```
+
 ## Version History
 
 - **MVP 1.0** (Issue #1) - Initial setup script with 9 sheets
-- **MVP 1.1** (Issue #2) - Add data validation _(coming soon)_
-- **MVP 1.2** (Issue #4) - Add sample data generation _(coming soon)_
+- **MVP 1.1** (Issue #2) - Add data validation
+- **MVP 1.2** (Issue #4) - Add sample data generation
+- **MVP 1.3** - Add automated tests
