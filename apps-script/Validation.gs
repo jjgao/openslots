@@ -60,8 +60,12 @@ function addDateValidation(sheet, range, allowBlank) {
  */
 function addTimeValidation(sheet, range) {
   // Accept formats like: 09:00, 9:00, 14:30, 23:59
+  // Using custom formula with REGEXMATCH
+  const firstCell = range.split(':')[0];
+  const formula = `=REGEXMATCH(${firstCell}, "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")`;
+
   const rule = SpreadsheetApp.newDataValidation()
-    .requireTextMatchesPattern('^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$')
+    .requireFormulaSatisfied(formula)
     .setAllowInvalid(false)
     .setHelpText('Format: HH:MM (e.g., 09:00, 14:30)')
     .build();
@@ -77,9 +81,15 @@ function addTimeValidation(sheet, range) {
  * @param {boolean} allowBlank - Whether to allow blank values (default: true)
  */
 function addPhoneValidation(sheet, range, allowBlank) {
+  // Using custom formula with REGEXMATCH
+  const firstCell = range.split(':')[0];
+  const formula = allowBlank !== false
+    ? `=OR(ISBLANK(${firstCell}), REGEXMATCH(TO_TEXT(${firstCell}), "^[\\d\\s\\-\\(\\)\\+]+$"))`
+    : `=REGEXMATCH(TO_TEXT(${firstCell}), "^[\\d\\s\\-\\(\\)\\+]+$")`;
+
   const rule = SpreadsheetApp.newDataValidation()
-    .requireTextMatchesPattern('^[\\d\\s\\-\\(\\)\\+]+$')
-    .setAllowInvalid(allowBlank !== false)
+    .requireFormulaSatisfied(formula)
+    .setAllowInvalid(false)
     .setHelpText('Enter phone number (any format)')
     .build();
 
@@ -121,8 +131,12 @@ function addNumberValidation(sheet, range, min, max) {
  * @param {string} helpText - Help text to display
  */
 function addTextPatternValidation(sheet, range, pattern, helpText) {
+  // Using custom formula with REGEXMATCH
+  const firstCell = range.split(':')[0];
+  const formula = `=REGEXMATCH(TO_TEXT(${firstCell}), "${pattern}")`;
+
   const rule = SpreadsheetApp.newDataValidation()
-    .requireTextMatchesPattern(pattern)
+    .requireFormulaSatisfied(formula)
     .setAllowInvalid(false)
     .setHelpText(helpText)
     .build();
