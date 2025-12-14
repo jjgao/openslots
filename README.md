@@ -21,10 +21,11 @@ A free, easy-to-use appointment booking system built with Google Sheets. Perfect
 ### Step 2: Install the Scripts
 1. In your spreadsheet, click **Extensions → Apps Script**
 2. Delete any default code
-3. Copy the 3 script files from the [`apps-script/`](apps-script/) folder:
+3. Copy the 4 script files from the [`apps-script/`](apps-script/) folder:
    - `Setup.gs`
    - `Validation.gs`
    - `SampleData.gs`
+   - `Tests.gs`
 4. Create a new file for each and paste the code
 5. Click **Save** (💾 icon)
 
@@ -35,7 +36,13 @@ A free, easy-to-use appointment booking system built with Google Sheets. Perfect
 4. Click **Yes** to confirm
 5. Wait 10-30 seconds for setup to complete
 
-### Step 4: Add Sample Data (Optional)
+### Step 4: Verify Setup (Recommended)
+1. Click **Appointment System → Tests → Run All Tests**
+2. Wait 30-60 seconds for tests to complete
+3. You should see: **"✅ Passed: 10/10"**
+4. If any tests fail, check the error messages
+
+### Step 5: Add Sample Data (Optional)
 1. Click **Appointment System → Add Sample Data**
 2. Click **Yes** to confirm
 3. Your system now has sample providers, clients, and appointments!
@@ -125,6 +132,12 @@ For now, you can use Google Sheets' built-in filtering and sorting to view your 
 - 15 sample appointments
 - Ready-to-use schedules
 
+✅ **Automated Testing**
+- 10 comprehensive unit tests
+- Verify setup, validation, and data integrity
+- Run tests anytime via custom menu
+- Quick tests for fast verification
+
 ## 🔧 Customization
 
 ### Change Business Hours
@@ -141,11 +154,68 @@ For now, you can use Google Sheets' built-in filtering and sorting to view your 
 2. Add a new row with provider information
 3. Set up their schedule in **Provider_Availability**
 
+## 🧪 Testing Your System
+
+The system includes automated tests to verify everything works correctly.
+
+### Running Tests
+
+**Full Test Suite** (recommended after setup):
+1. Click **Appointment System → Tests → Run All Tests**
+2. Wait 30-60 seconds
+3. View results: "✅ Passed: X/10" or "❌ Failed: X/10"
+
+**Quick Verification** (3 essential tests, ~15 seconds):
+1. Click **Appointment System → Tests → Run Quick Tests**
+2. Good for quick health checks
+
+**What Gets Tested:**
+- ✅ Sheet creation and deletion
+- ✅ Header formatting (bold, blue, frozen)
+- ✅ Auto-increment ID formulas (PROV001, CLI001, etc.)
+- ✅ Email validation
+- ✅ Phone validation
+- ✅ Date validation
+- ✅ Time validation (HH:MM format)
+- ✅ Dropdown validation
+- ✅ Number validation
+- ✅ Sample data presence
+
+### When to Run Tests
+
+- **After initial setup** - Verify everything installed correctly
+- **After making changes** - Ensure nothing broke
+- **Before going live** - Final verification
+- **Troubleshooting** - Identify what's not working
+
+### Test Results
+
+**All tests passed:**
+```
+✅ Passed: 10/10
+🎉 All tests passed!
+```
+
+**Some tests failed:**
+```
+✅ Passed: 8/10
+❌ Failed: 2/10
+
+Failed Tests:
+❌ Time Validation
+   Error: ...
+```
+
+If tests fail, check the error message for guidance. Common issues:
+- Script files not saved properly
+- Missing validation formulas
+- Sheet structure incorrect
+
 ## 🆘 Troubleshooting
 
 ### The custom menu doesn't appear
 - Refresh the page (F5)
-- Make sure you copied all 3 script files
+- Make sure you copied all 4 script files (Setup.gs, Validation.gs, SampleData.gs, Tests.gs)
 - Check that you saved the scripts
 
 ### IDs aren't generating automatically
@@ -163,6 +233,14 @@ For now, you can use Google Sheets' built-in filtering and sorting to view your 
 - Click "Review Permissions" → Select your account
 - Click "Advanced" → "Go to Appointment Booking System" → "Allow"
 - This is normal and only happens once
+
+### Tests are failing
+1. Run **Appointment System → Tests → Run All Tests** to see which tests fail
+2. Check the error messages for specific issues
+3. Common fixes:
+   - Re-run **Initialize System** to recreate sheets
+   - Make sure all 4 script files are saved
+   - Check that formulas exist in column A (IDs)
 
 ## 🚦 What's Next?
 
