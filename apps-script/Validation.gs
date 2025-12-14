@@ -60,17 +60,25 @@ function addDateValidation(sheet, range, allowBlank) {
  */
 function addTimeValidation(sheet, range) {
   // Accept formats like: 09:00, 9:00, 14:30, 23:59
-  // Using custom formula with REGEXMATCH
-  const firstCell = range.split(':')[0];
-  const formula = `=REGEXMATCH(${firstCell}, "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")`;
+  // Apply validation to each cell individually for proper relative references
+  const rangeObj = sheet.getRange(range);
+  const numRows = rangeObj.getNumRows();
+  const startRow = rangeObj.getRow();
+  const col = rangeObj.getColumn();
+  const colLetter = columnToLetter(col);
 
-  const rule = SpreadsheetApp.newDataValidation()
-    .requireFormulaSatisfied(formula)
-    .setAllowInvalid(false)
-    .setHelpText('Format: HH:MM (e.g., 09:00, 14:30)')
-    .build();
+  for (let i = 0; i < numRows; i++) {
+    const cellRef = `${colLetter}${startRow + i}`;
+    const formula = `=REGEXMATCH(${cellRef}, "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")`;
 
-  sheet.getRange(range).setDataValidation(rule);
+    const rule = SpreadsheetApp.newDataValidation()
+      .requireFormulaSatisfied(formula)
+      .setAllowInvalid(false)
+      .setHelpText('Format: HH:MM (e.g., 09:00, 14:30)')
+      .build();
+
+    sheet.getRange(cellRef).setDataValidation(rule);
+  }
 }
 
 /**
@@ -81,19 +89,27 @@ function addTimeValidation(sheet, range) {
  * @param {boolean} allowBlank - Whether to allow blank values (default: true)
  */
 function addPhoneValidation(sheet, range, allowBlank) {
-  // Using custom formula with REGEXMATCH
-  const firstCell = range.split(':')[0];
-  const formula = allowBlank !== false
-    ? `=OR(ISBLANK(${firstCell}), REGEXMATCH(TO_TEXT(${firstCell}), "^[\\d\\s\\-\\(\\)\\+]+$"))`
-    : `=REGEXMATCH(TO_TEXT(${firstCell}), "^[\\d\\s\\-\\(\\)\\+]+$")`;
+  // Apply validation to each cell individually for proper relative references
+  const rangeObj = sheet.getRange(range);
+  const numRows = rangeObj.getNumRows();
+  const startRow = rangeObj.getRow();
+  const col = rangeObj.getColumn();
+  const colLetter = columnToLetter(col);
 
-  const rule = SpreadsheetApp.newDataValidation()
-    .requireFormulaSatisfied(formula)
-    .setAllowInvalid(false)
-    .setHelpText('Enter phone number (any format)')
-    .build();
+  for (let i = 0; i < numRows; i++) {
+    const cellRef = `${colLetter}${startRow + i}`;
+    const formula = allowBlank !== false
+      ? `=OR(ISBLANK(${cellRef}), REGEXMATCH(TO_TEXT(${cellRef}), "^[\\d\\s\\-\\(\\)\\+]+$"))`
+      : `=REGEXMATCH(TO_TEXT(${cellRef}), "^[\\d\\s\\-\\(\\)\\+]+$")`;
 
-  sheet.getRange(range).setDataValidation(rule);
+    const rule = SpreadsheetApp.newDataValidation()
+      .requireFormulaSatisfied(formula)
+      .setAllowInvalid(false)
+      .setHelpText('Enter phone number (any format)')
+      .build();
+
+    sheet.getRange(cellRef).setDataValidation(rule);
+  }
 }
 
 /**
@@ -167,4 +183,20 @@ function addTextContainsValidation(sheet, range, text) {
  */
 function clearValidation(sheet, range) {
   sheet.getRange(range).clearDataValidations();
+}
+
+/**
+ * Helper function to convert column number to letter (A, B, C, etc.)
+ * @param {number} column - Column number (1-based)
+ * @return {string} Column letter
+ */
+function columnToLetter(column) {
+  let temp;
+  let letter = '';
+  while (column > 0) {
+    temp = (column - 1) % 26;
+    letter = String.fromCharCode(temp + 65) + letter;
+    column = (column - temp - 1) / 26;
+  }
+  return letter;
 }
