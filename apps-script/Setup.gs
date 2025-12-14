@@ -128,6 +128,11 @@ function createProvidersSheet() {
   // Add auto-increment formula for provider_id
   addAutoIncrementFormula(sheet, 'PROV', 'B');
 
+  // Add data validation
+  addEmailValidation(sheet, 'C2:C1000', true);  // email (allow blank)
+  addPhoneValidation(sheet, 'D2:D1000', true);  // phone (allow blank)
+  addDropdownValidation(sheet, 'F2:F1000', ['Active', 'Inactive'], 'Select provider status');  // active_status
+
   // Set column widths
   sheet.setColumnWidth(1, 100);  // provider_id
   sheet.setColumnWidth(2, 150);  // name
@@ -179,6 +184,13 @@ function createClientsSheet() {
   formatHeaderRow(sheet, headers.length);
   addAutoIncrementFormula(sheet, 'CLI', 'B');
 
+  // Add data validation
+  addPhoneValidation(sheet, 'C2:C1000', false);  // phone (required)
+  addEmailValidation(sheet, 'D2:D1000', true);   // email (optional)
+  addDropdownValidation(sheet, 'E2:E1000', ['Yes', 'No'], 'Is this client a member?');  // is_member
+  addDateValidation(sheet, 'G2:G1000', true);    // first_visit_date
+  addDateValidation(sheet, 'H2:H1000', true);    // last_visit_date
+
   sheet.setColumnWidth(1, 100);  // client_id
   sheet.setColumnWidth(2, 150);  // name
   sheet.setColumnWidth(3, 120);  // phone
@@ -210,6 +222,16 @@ function createAppointmentsSheet() {
 
   formatHeaderRow(sheet, headers.length);
   addAutoIncrementFormula(sheet, 'APT', 'B');
+
+  // Add data validation
+  addDateValidation(sheet, 'E2:E1000', false);  // appointment_date (required)
+  addTimeValidation(sheet, 'F2:F1000');         // start_time
+  addTimeValidation(sheet, 'G2:G1000');         // end_time
+  addNumberValidation(sheet, 'H2:H1000', 1, 480);  // duration (1-480 minutes / 8 hours max)
+  addDropdownValidation(sheet, 'I2:I1000',
+    ['Booked', 'Confirmed', 'Checked-in', 'Completed', 'No-show', 'Cancelled', 'Rescheduled'],
+    'Select appointment status');  // status
+  addDateValidation(sheet, 'J2:J1000', true);   // created_date
 
   sheet.setColumnWidth(1, 120);  // appointment_id
   sheet.setColumnWidth(2, 100);  // client_id
@@ -246,6 +268,16 @@ function createProviderAvailabilitySheet() {
   formatHeaderRow(sheet, headers.length);
   addAutoIncrementFormula(sheet, 'AVL', 'B');
 
+  // Add data validation
+  addDropdownValidation(sheet, 'C2:C1000',
+    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    'Select day of week');  // day_of_week
+  addTimeValidation(sheet, 'D2:D1000');  // start_time
+  addTimeValidation(sheet, 'E2:E1000');  // end_time
+  addDateValidation(sheet, 'F2:F1000', true);  // effective_date_start
+  addDateValidation(sheet, 'G2:G1000', true);  // effective_date_end
+  addDropdownValidation(sheet, 'H2:H1000', ['Yes', 'No'], 'Is this a recurring schedule?');  // is_recurring
+
   sheet.setColumnWidth(1, 120);  // availability_id
   sheet.setColumnWidth(2, 100);  // provider_id
   sheet.setColumnWidth(3, 120);  // day_of_week
@@ -273,6 +305,11 @@ function createProviderExceptionsSheet() {
 
   formatHeaderRow(sheet, headers.length);
   addAutoIncrementFormula(sheet, 'EXC', 'B');
+
+  // Add data validation
+  addDateValidation(sheet, 'C2:C1000', false);  // exception_date (required)
+  addTimeValidation(sheet, 'D2:D1000');  // start_time
+  addTimeValidation(sheet, 'E2:E1000');  // end_time
 
   sheet.setColumnWidth(1, 120);  // exception_id
   sheet.setColumnWidth(2, 100);  // provider_id
@@ -303,6 +340,11 @@ function createActivityLogSheet() {
   formatHeaderRow(sheet, headers.length);
   addAutoIncrementFormula(sheet, 'LOG', 'C');  // Trigger on action_type (C) instead of timestamp
 
+  // Add data validation
+  addDropdownValidation(sheet, 'C2:C1000',
+    ['book', 'cancel', 'reschedule', 'check-in', 'no-show', 'late', 'confirmation-call', 'confirmation-text', 'confirmation-email'],
+    'Select action type');  // action_type
+
   sheet.setColumnWidth(1, 100);  // log_id
   sheet.setColumnWidth(2, 150);  // timestamp
   sheet.setColumnWidth(3, 150);  // action_type
@@ -332,6 +374,11 @@ function createConfirmationTrackingSheet() {
 
   formatHeaderRow(sheet, headers.length);
   addAutoIncrementFormula(sheet, 'CNF', 'B');
+
+  // Add data validation
+  addDateValidation(sheet, 'C2:C1000', true);  // confirmation_date
+  addDropdownValidation(sheet, 'D2:D1000', ['Call', 'Text', 'Email'], 'Select contact method');  // method
+  addDropdownValidation(sheet, 'E2:E1000', ['Confirmed', 'Declined', 'Rescheduled', 'No-response'], 'Select confirmation status');  // status
 
   sheet.setColumnWidth(1, 130);  // confirmation_id
   sheet.setColumnWidth(2, 120);  // appointment_id
