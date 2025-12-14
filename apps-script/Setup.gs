@@ -18,6 +18,9 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Appointment System')
     .addItem('Initialize System', 'initializeSystem')
+    .addItem('Add Sample Data', 'addSampleData')
+    .addSeparator()
+    .addItem('Clear All Data', 'clearAllData')
     .addSeparator()
     .addItem('About', 'showAbout')
     .addToUi();
