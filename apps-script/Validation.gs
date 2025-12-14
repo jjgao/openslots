@@ -78,15 +78,12 @@ function addTimeValidation(sheet, range) {
  * @param {boolean} allowBlank - Whether to allow blank values (default: true)
  */
 function addPhoneValidation(sheet, range, allowBlank) {
-  // Simple validation: just provide helpful text
-  // More lenient to avoid blocking valid phone number formats
-  const rule = SpreadsheetApp.newDataValidation()
-    .requireTextIsValidNumber()  // Built-in number/text check
-    .setAllowInvalid(allowBlank !== false)  // Allow blank if specified
-    .setHelpText('Enter phone number (any format)')
-    .build();
+  // No strict validation - just set number format and help text
+  // This avoids validation errors while still providing guidance
+  sheet.getRange(range).setNumberFormat('@');  // Text format
+  sheet.getRange(range).setNote('Enter phone number (any format)');
 
-  sheet.getRange(range).setDataValidation(rule);
+  // Note: We don't add actual validation to avoid blocking valid phone formats
 }
 
 /**
