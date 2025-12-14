@@ -59,26 +59,15 @@ function addDateValidation(sheet, range, allowBlank) {
  * @param {string} range - Range in A1 notation
  */
 function addTimeValidation(sheet, range) {
-  // Accept formats like: 09:00, 9:00, 14:30, 23:59
-  // Apply validation to each cell individually for proper relative references
-  const rangeObj = sheet.getRange(range);
-  const numRows = rangeObj.getNumRows();
-  const startRow = rangeObj.getRow();
-  const col = rangeObj.getColumn();
-  const colLetter = columnToLetter(col);
+  // Simple validation: just require text contains ":"
+  // This provides helpful hint without blocking valid time entries
+  const rule = SpreadsheetApp.newDataValidation()
+    .requireTextContains(':')
+    .setAllowInvalid(true)  // Show warning but allow entry
+    .setHelpText('Format: HH:MM (e.g., 09:00, 14:30)')
+    .build();
 
-  for (let i = 0; i < numRows; i++) {
-    const cellRef = `${colLetter}${startRow + i}`;
-    const formula = `=REGEXMATCH(${cellRef}, "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")`;
-
-    const rule = SpreadsheetApp.newDataValidation()
-      .requireFormulaSatisfied(formula)
-      .setAllowInvalid(false)
-      .setHelpText('Format: HH:MM (e.g., 09:00, 14:30)')
-      .build();
-
-    sheet.getRange(cellRef).setDataValidation(rule);
-  }
+  sheet.getRange(range).setDataValidation(rule);
 }
 
 /**
@@ -89,27 +78,15 @@ function addTimeValidation(sheet, range) {
  * @param {boolean} allowBlank - Whether to allow blank values (default: true)
  */
 function addPhoneValidation(sheet, range, allowBlank) {
-  // Apply validation to each cell individually for proper relative references
-  const rangeObj = sheet.getRange(range);
-  const numRows = rangeObj.getNumRows();
-  const startRow = rangeObj.getRow();
-  const col = rangeObj.getColumn();
-  const colLetter = columnToLetter(col);
+  // Simple validation: just provide helpful text
+  // More lenient to avoid blocking valid phone number formats
+  const rule = SpreadsheetApp.newDataValidation()
+    .requireTextIsValidNumber()  // Built-in number/text check
+    .setAllowInvalid(allowBlank !== false)  // Allow blank if specified
+    .setHelpText('Enter phone number (any format)')
+    .build();
 
-  for (let i = 0; i < numRows; i++) {
-    const cellRef = `${colLetter}${startRow + i}`;
-    const formula = allowBlank !== false
-      ? `=OR(ISBLANK(${cellRef}), REGEXMATCH(TO_TEXT(${cellRef}), "^[\\d\\s\\-\\(\\)\\+]+$"))`
-      : `=REGEXMATCH(TO_TEXT(${cellRef}), "^[\\d\\s\\-\\(\\)\\+]+$")`;
-
-    const rule = SpreadsheetApp.newDataValidation()
-      .requireFormulaSatisfied(formula)
-      .setAllowInvalid(false)
-      .setHelpText('Enter phone number (any format)')
-      .build();
-
-    sheet.getRange(cellRef).setDataValidation(rule);
-  }
+  sheet.getRange(range).setDataValidation(rule);
 }
 
 /**
