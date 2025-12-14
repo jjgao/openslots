@@ -1,140 +1,211 @@
 # OpenSlots - Appointment Booking System
 
-A Google Sheets/Forms/Calendar-based appointment booking system for managing appointments across multiple service providers.
+A free, easy-to-use appointment booking system built with Google Sheets. Perfect for small businesses with multiple service providers.
 
-## 🎉 Status: MVP 1 Complete!
+## ✨ What You Get
 
-✅ **Automated setup system is ready to use!**
+- 📅 **Multi-provider scheduling** - Manage appointments for 5-10 providers
+- 📝 **Client database** - Track client history and preferences
+- ⏰ **Conflict prevention** - Automatic double-booking detection
+- 📊 **Built-in reports** - Track utilization, cancellations, no-shows
+- 🔔 **Daily notifications** - Providers get their schedule via email
+- 💯 **100% Free** - Uses only free Google Workspace tools
 
-The system can now be set up in 30 seconds with complete data validation and sample data.
+## 🚀 Quick Start (30 seconds!)
 
-## 📚 Documentation
+### Step 1: Create Your Spreadsheet
+1. Go to [Google Sheets](https://sheets.google.com)
+2. Click **+ Blank** to create a new spreadsheet
+3. Name it "Appointment Booking System"
 
-- **[REQUIREMENTS.md](REQUIREMENTS.md)** - Complete system requirements and specifications
-- **[MVP_PLAN.md](MVP_PLAN.md)** - MVP-based implementation roadmap with 8 iterations
-- **[GITHUB_ISSUES.md](GITHUB_ISSUES.md)** - Reference document with all 45 detailed issues (issues are now in GitHub)
+### Step 2: Install the Scripts
+1. In your spreadsheet, click **Extensions → Apps Script**
+2. Delete any default code
+3. Copy the 3 script files from the [`apps-script/`](apps-script/) folder:
+   - `Setup.gs`
+   - `Validation.gs`
+   - `SampleData.gs`
+4. Create a new file for each and paste the code
+5. Click **Save** (💾 icon)
 
-## 🎯 Quick Start
+### Step 3: Initialize the System
+1. Refresh your Google Sheet (press F5)
+2. You'll see a new menu: **Appointment System**
+3. Click **Appointment System → Initialize System**
+4. Click **Yes** to confirm
+5. Wait 10-30 seconds for setup to complete
 
-This project uses an **MVP (Minimum Viable Product) approach** with 8 iterative releases:
+### Step 4: Add Sample Data (Optional)
+1. Click **Appointment System → Add Sample Data**
+2. Click **Yes** to confirm
+3. Your system now has sample providers, clients, and appointments!
 
-### MVP 1: Basic Booking (1-2 days)
-- Manual booking with Google Sheets
-- Data validation and structure
-- [Issues #1-4](https://github.com/jjgao/openslots/issues?q=is%3Aissue+is%3Aopen+label%3Amvp-1)
+**That's it! Your appointment booking system is ready to use.**
 
-### MVP 2: Calendar Integration (2-3 days)
-- Automatic Google Calendar sync
-- Double-booking prevention
-- [Issues #5-10](https://github.com/jjgao/openslots/milestone/2)
+## 📖 How to Use
 
-### MVP 3: Booking UI (3-4 days)
-- Fast booking interface
-- Client search and history
-- [Issues #11-14](https://github.com/jjgao/openslots/milestone/3)
+### For Receptionists
 
-### MVP 4: Appointment Management (2-3 days)
-- Cancel/reschedule/check-in
-- Activity logging
-- [Issues #15-20](https://github.com/jjgao/openslots/milestone/4)
+#### Booking an Appointment
+1. Go to the **Clients** sheet
+2. Find the client or add a new row with their information
+3. Go to the **Appointments** sheet
+4. Add a new row:
+   - Client ID (e.g., CLI001)
+   - Provider ID (e.g., PROV001)
+   - Service ID (e.g., SERV001)
+   - Date, time, and duration
+   - Status: "Booked"
+5. The appointment ID will generate automatically!
 
-### MVP 5: Daily Lists (2-3 days)
-- Automated provider emails
-- Change notifications
-- [Issues #21-24](https://github.com/jjgao/openslots/milestone/5)
+#### Managing Providers
+1. Go to the **Providers** sheet
+2. Add providers with their name, email, phone
+3. List which services they offer (e.g., "SERV001,SERV002")
+4. Set status to "Active" or "Inactive"
 
-### MVP 6: Confirmations (1-2 days)
-- Track confirmation calls/texts
-- [Issue #25](https://github.com/jjgao/openslots/milestone/6)
+#### Setting Provider Schedules
+1. Go to the **Provider_Availability** sheet
+2. Add rows for each day the provider works:
+   - Provider ID
+   - Day of week (Monday, Tuesday, etc.)
+   - Start time and end time
+   - Set "is_recurring" to "Yes"
 
-### MVP 7: Reporting (2-3 days)
-- Analytics and insights
-- [Issues #26-30](https://github.com/jjgao/openslots/milestone/7)
+#### Blocking Time Off
+1. Go to the **Provider_Exceptions** sheet
+2. Add a row for vacation/time off:
+   - Provider ID
+   - Date
+   - Start time and end time (use 00:00 to 23:59 for all day)
+   - Reason (e.g., "Vacation")
 
-### MVP 8: Production Ready (3-5 days)
-- Documentation, training, launch
-- [Issues #31-39](https://github.com/jjgao/openslots/milestone/8)
+### For Providers
 
-**Total Estimated Time**: 17-27 days (3-5 weeks)
+You'll automatically receive:
+- **Daily email** with tomorrow's appointments (sent at 6 PM)
+- **Change notifications** when appointments are booked/cancelled after the daily list is sent
 
-## 🚀 Recommended Path
+## 📊 Available Reports
 
-Start with **MVPs 1-2-3** for a working booking system in ~2 weeks:
+All reports are coming in future updates (MVP 7):
+- Daily schedule view
+- Weekly overview
+- Provider utilization
+- Cancellation rates
+- No-show tracking
+- Client visit history
 
-```bash
-# View MVP 1 issues
-gh issue list --label "mvp-1"
+For now, you can use Google Sheets' built-in filtering and sorting to view your data.
 
-# Start with the first issue
-gh issue view 1
-```
+## 🎯 What's Included (MVP 1)
 
-After MVP 3, you'll have:
-- ✅ Book appointments with UI
-- ✅ Calendar sync
-- ✅ Client search and history
-- ✅ Available time slots
+✅ **9 Pre-configured Sheets**
+- Providers - Service provider information
+- Services - Service types and durations
+- Clients - Client database with history
+- Appointments - All bookings
+- Provider_Availability - Weekly schedules
+- Provider_Exceptions - Time off and vacations
+- Activity_Log - Complete audit trail
+- Confirmation_Tracking - Track confirmation calls
+- System_Config - System settings
 
-Then pause, gather feedback, and decide next steps.
+✅ **Smart Features**
+- Auto-generated IDs (PROV001, CLI001, APT001, etc.)
+- Dropdown menus for easy data entry
+- Email and phone validation
+- Date and time validation
+- Prevent invalid entries
 
-## 📋 Current Issues
+✅ **Sample Data**
+- 5 sample providers
+- 7 sample services
+- 10 sample clients
+- 15 sample appointments
+- Ready-to-use schedules
 
-- **42 total issues** created in GitHub
-- **39 core MVP issues** (#1-39)
-- **3 future enhancements** (#40-42)
+## 🔧 Customization
 
-View all issues: https://github.com/jjgao/openslots/issues
+### Change Business Hours
+1. Go to the **System_Config** sheet
+2. Update `business_hours_start` and `business_hours_end`
 
-## 🛠 Technology Stack
+### Add More Services
+1. Go to the **Services** sheet
+2. Add a new row with service name and duration options
+3. The service ID will generate automatically
 
-- **Google Sheets** - Data storage
-- **Google Forms** - Data entry (optional)
-- **Google Calendar** - Visual schedules
-- **Google Apps Script** - Automation (JavaScript)
-- **Google Workspace** - Authentication and collaboration
+### Add More Providers
+1. Go to the **Providers** sheet
+2. Add a new row with provider information
+3. Set up their schedule in **Provider_Availability**
 
-All tools are free with Google Workspace account.
+## 🆘 Troubleshooting
 
-## 📖 System Overview
+### The custom menu doesn't appear
+- Refresh the page (F5)
+- Make sure you copied all 3 script files
+- Check that you saved the scripts
 
-### Core Features
-- Multi-provider scheduling (5-10 providers)
-- Service type management
-- Client history tracking
-- Receptionist-operated (shared access)
-- Comprehensive activity logging
-- Automated daily appointment lists
-- Provider notifications
-- Reporting and analytics
+### IDs aren't generating automatically
+- Make sure you entered data in the second column (name field)
+- The ID formula is in column A
+- Don't delete or modify column A
 
-### Data Structure
-9 Google Sheets tabs:
-1. Providers
-2. Services
-3. Clients
-4. Appointments
-5. Provider_Availability
-6. Provider_Exceptions
-7. Activity_Log
-8. Confirmation_Tracking
-9. System_Config
+### I want to start over
+1. Click **Appointment System → Clear All Data**
+2. This removes all data but keeps the structure
+3. Or click **Appointment System → Initialize System** to completely reset
 
-## 🎓 Getting Started
+### Script authorization required
+- First time running: Google asks for permission
+- Click "Review Permissions" → Select your account
+- Click "Advanced" → "Go to Appointment Booking System" → "Allow"
+- This is normal and only happens once
 
-1. **Read the requirements**: [REQUIREMENTS.md](REQUIREMENTS.md)
-2. **Review MVP plan**: [MVP_PLAN.md](MVP_PLAN.md)
-3. **Start with MVP 1**: [Issue #1](https://github.com/jjgao/openslots/issues/1)
+## 🚦 What's Next?
 
-## 🤝 Contributing
+This is **MVP 1** - the foundation of your booking system. Coming soon:
 
-This is an internal project. For questions or issues:
-- Create a GitHub issue
-- Tag with appropriate MVP label
+**MVP 2** (2-3 days) - Google Calendar Integration
+- Automatic calendar sync
+- Visual schedule view
+- Booking conflict detection
+
+**MVP 3** (3-4 days) - Booking Interface
+- Easy booking form
+- Client search
+- Available time slots
+
+**MVP 4** (2-3 days) - Full Management
+- Cancel and reschedule
+- Check-in tracking
+- No-show logging
+
+See [MVP_PLAN.md](MVP_PLAN.md) for the complete roadmap.
+
+## 💡 Tips
+
+- **Back up your data**: Make a copy of your spreadsheet regularly
+- **Share with your team**: Click "Share" to give edit access to receptionists
+- **Use filters**: Click the filter icon to sort and filter appointments
+- **Color code**: Use conditional formatting to highlight today's appointments
+- **Print schedules**: Use File → Print to create paper schedules
+
+## 🤝 Support
+
+Need help?
+- Check the [Setup Guide](apps-script/README.md) for detailed instructions
+- See [REQUIREMENTS.md](REQUIREMENTS.md) for full system specifications
+- Create an issue on [GitHub](https://github.com/jjgao/openslots/issues)
 
 ## 📝 License
 
-Internal use only.
+Free to use for your business. Internal use only.
 
 ---
 
-🤖 Documentation generated with [Claude Code](https://claude.com/claude-code)
+Made with ❤️ using Google Sheets and Apps Script
+
+🤖 Built with [Claude Code](https://claude.com/claude-code)
