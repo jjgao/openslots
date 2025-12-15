@@ -87,6 +87,33 @@ A free, easy-to-use appointment booking system built with Google Sheets. Perfect
    - Start time and end time (use 00:00 to 23:59 for all day)
    - Reason (e.g., "Vacation")
 
+#### Managing Business Holidays
+1. Go to the **Business_Holidays** sheet
+2. Add business closure dates:
+   - Date (e.g., 2026-12-25)
+   - Name (e.g., "Christmas Day")
+   - Recurring: "Yes" for annual holidays, "No" for one-time closures
+   - Notes (optional explanation)
+
+Examples in sample data:
+- Recurring: New Year's Day, Christmas, Independence Day, Thanksgiving
+- One-time: Summer Break, Staff Training Day
+
+#### Managing Business Exceptions (Partial Closures)
+1. Go to the **Business_Exceptions** sheet
+2. Add time blocks when business is partially closed:
+   - Date (e.g., 2026-05-05)
+   - Start time (e.g., 10:00)
+   - End time (e.g., 12:00)
+   - Reason (e.g., "All-Staff Meeting")
+   - Notes (optional details)
+
+Examples in sample data:
+- All-Staff Meeting (10:00-12:00)
+- Building Maintenance (14:00-17:00)
+- IT System Upgrade (09:00-11:00)
+- Safety Training (13:00-14:30)
+
 ### For Providers
 
 You'll automatically receive:
@@ -107,7 +134,7 @@ For now, you can use Google Sheets' built-in filtering and sorting to view your 
 
 ## 🎯 What's Included (MVP 1)
 
-✅ **9 Pre-configured Sheets**
+✅ **11 Pre-configured Sheets**
 - Providers - Service provider information
 - Services - Service types and durations
 - Clients - Client database with history
@@ -117,6 +144,8 @@ For now, you can use Google Sheets' built-in filtering and sorting to view your 
 - Activity_Log - Complete audit trail
 - Confirmation_Tracking - Track confirmation calls
 - System_Config - System settings
+- **Business_Holidays** - Business closure dates (holidays)
+- **Business_Exceptions** - Partial day closures (meetings, maintenance)
 
 ✅ **Smart Features**
 - Auto-generated IDs (PROV001, CLI001, APT001, etc.)

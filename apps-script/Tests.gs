@@ -26,6 +26,7 @@ function runAllTests() {
   results.push(testSheetCreation());
   results.push(testHeaderFormatting());
   results.push(testAutoIncrementFormula());
+  results.push(testBusinessSheetsCreation());
 
   // Validation tests
   results.push(testEmailValidation());
@@ -460,6 +461,50 @@ function runQuickTests() {
   results.push(testDropdownValidation());
 
   displayTestResults(results);
+}
+
+/**
+ * Test: Business sheets exist and have correct structure
+ */
+function testBusinessSheetsCreation() {
+  const testName = 'Business Sheets Creation';
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // Check Business_Holidays sheet
+    const holidaysSheet = ss.getSheetByName('Business_Holidays');
+    if (!holidaysSheet) {
+      return { name: testName, passed: false, message: 'Business_Holidays sheet not found' };
+    }
+
+    const holidaysHeaders = holidaysSheet.getRange(1, 1, 1, 5).getValues()[0];
+    const expectedHolidaysHeaders = ['holiday_id', 'date', 'name', 'recurring', 'notes'];
+    if (JSON.stringify(holidaysHeaders) !== JSON.stringify(expectedHolidaysHeaders)) {
+      return { name: testName, passed: false, message: `Business_Holidays headers incorrect: ${holidaysHeaders}` };
+    }
+
+    // Check Business_Exceptions sheet
+    const exceptionsSheet = ss.getSheetByName('Business_Exceptions');
+    if (!exceptionsSheet) {
+      return { name: testName, passed: false, message: 'Business_Exceptions sheet not found' };
+    }
+
+    const exceptionsHeaders = exceptionsSheet.getRange(1, 1, 1, 6).getValues()[0];
+    const expectedExceptionsHeaders = ['exception_id', 'date', 'start_time', 'end_time', 'reason', 'notes'];
+    if (JSON.stringify(exceptionsHeaders) !== JSON.stringify(expectedExceptionsHeaders)) {
+      return { name: testName, passed: false, message: `Business_Exceptions headers incorrect: ${exceptionsHeaders}` };
+    }
+
+    return {
+      name: testName,
+      passed: true,
+      message: 'Business_Holidays and Business_Exceptions sheets created correctly'
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
 }
 
 /**

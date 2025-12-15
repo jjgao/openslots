@@ -32,6 +32,8 @@ function addSampleData() {
     addSampleAppointments();
     addSampleActivityLog();
     addSampleConfirmationTracking();
+    addSampleBusinessHolidays();
+    addSampleBusinessExceptions();
 
     Logger.log('Sample data added successfully');
     ui.alert(
@@ -45,7 +47,9 @@ function addSampleData() {
       '• 3 provider exceptions\n' +
       '• 15 appointments (past and future)\n' +
       '• Sample activity logs\n' +
-      '• Sample confirmations\n\n' +
+      '• Sample confirmations\n' +
+      '• 6 business holidays\n' +
+      '• 4 business exceptions\n\n' +
       'You can now test the system!',
       ui.ButtonSet.OK
     );
@@ -372,7 +376,8 @@ function clearAllData() {
   const sheetNames = [
     'Providers', 'Services', 'Clients', 'Appointments',
     'Provider_Availability', 'Provider_Exceptions',
-    'Activity_Log', 'Confirmation_Tracking'
+    'Activity_Log', 'Confirmation_Tracking',
+    'Business_Holidays', 'Business_Exceptions'
   ];
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -387,4 +392,55 @@ function clearAllData() {
 
   ui.alert('Data Cleared', 'All data has been removed from sheets.', ui.ButtonSet.OK);
   Logger.log('All data cleared successfully');
+}
+
+/**
+ * Adds sample business holidays
+ */
+function addSampleBusinessHolidays() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Business_Holidays');
+  const today = new Date();
+
+  const sampleData = [
+    // Recurring holidays
+    [formatDate(new Date(today.getFullYear(), 0, 1)), 'New Year\'s Day', 'Yes', 'Office closed for New Year'],
+    [formatDate(new Date(today.getFullYear(), 11, 25)), 'Christmas Day', 'Yes', 'Office closed for Christmas'],
+    [formatDate(new Date(today.getFullYear(), 6, 4)), 'Independence Day', 'Yes', 'Office closed for July 4th'],
+    [formatDate(new Date(today.getFullYear(), 10, 28)), 'Thanksgiving', 'Yes', 'Office closed for Thanksgiving'],
+
+    // One-time closures
+    [formatDate(new Date(today.getFullYear(), 7, 2)), 'Summer Break', 'No', 'Annual staff retreat'],
+    [formatDate(new Date(today.getFullYear() + 1, 2, 15)), 'Staff Training Day', 'No', 'All-day training workshop']
+  ];
+
+  for (let i = 0; i < sampleData.length; i++) {
+    sheet.getRange(i + 2, 2, 1, sampleData[i].length).setValues([sampleData[i]]);
+  }
+
+  Logger.log('Sample business holidays added: ' + sampleData.length);
+}
+
+/**
+ * Adds sample business exceptions (partial day closures)
+ */
+function addSampleBusinessExceptions() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Business_Exceptions');
+  const today = new Date();
+
+  // Get next month dates
+  const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+
+  const sampleData = [
+    // Meetings and events
+    [formatDate(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 5)), '10:00', '12:00', 'All-Staff Meeting', 'Monthly team meeting - no appointments'],
+    [formatDate(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 15)), '14:00', '17:00', 'Building Maintenance', 'HVAC system inspection'],
+    [formatDate(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 20)), '09:00', '11:00', 'IT System Upgrade', 'Network infrastructure update'],
+    [formatDate(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 25)), '13:00', '14:30', 'Safety Training', 'Mandatory fire safety drill']
+  ];
+
+  for (let i = 0; i < sampleData.length; i++) {
+    sheet.getRange(i + 2, 2, 1, sampleData[i].length).setValues([sampleData[i]]);
+  }
+
+  Logger.log('Sample business exceptions added: ' + sampleData.length);
 }

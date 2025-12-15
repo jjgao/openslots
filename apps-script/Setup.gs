@@ -81,6 +81,8 @@ function initializeSystem() {
     createActivityLogSheet();
     createConfirmationTrackingSheet();
     createSystemConfigSheet();
+    createBusinessHolidaysSheet();
+    createBusinessExceptionsSheet();
 
     // Delete the default Sheet1 if it exists and is empty
     deleteDefaultSheet();
@@ -89,7 +91,7 @@ function initializeSystem() {
     ui.alert(
       'Success!',
       'All sheets have been created and configured.\n\n' +
-      '9 sheets created:\n' +
+      '11 sheets created:\n' +
       '• Providers\n' +
       '• Services\n' +
       '• Clients\n' +
@@ -98,7 +100,9 @@ function initializeSystem() {
       '• Provider_Exceptions\n' +
       '• Activity_Log\n' +
       '• Confirmation_Tracking\n' +
-      '• System_Config\n\n' +
+      '• System_Config\n' +
+      '• Business_Holidays\n' +
+      '• Business_Exceptions\n\n' +
       'You can now start using the system!',
       ui.ButtonSet.OK
     );
@@ -459,6 +463,72 @@ function addAutoIncrementFormula(sheet, prefix, triggerColumn) {
 
   // Copy formula down to row 100 for easier manual entry
   sheet.getRange('A2:A100').setFormula(formula);
+}
+
+/**
+ * Creates the Business_Holidays sheet
+ */
+function createBusinessHolidaysSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = 'Business_Holidays';
+
+  deleteSheetIfExists(sheetName);
+  const sheet = ss.insertSheet(sheetName);
+
+  const headers = ['holiday_id', 'date', 'name', 'recurring', 'notes'];
+  sheet.appendRow(headers);
+
+  formatHeaderRow(sheet, headers.length);
+
+  // Set column widths
+  sheet.setColumnWidth(1, 100);  // holiday_id
+  sheet.setColumnWidth(2, 120);  // date
+  sheet.setColumnWidth(3, 200);  // name
+  sheet.setColumnWidth(4, 100);  // recurring
+  sheet.setColumnWidth(5, 300);  // notes
+
+  // Add auto-increment formula for holiday_id
+  addAutoIncrementFormula(sheet, 'HOL', 'B');
+
+  // Add data validation
+  addDateValidation(sheet, 'B2:B1000', false);  // Date required
+  addDropdownValidation(sheet, 'D2:D1000', ['Yes', 'No'], 'Is this an annual holiday?');
+
+  Logger.log('Business_Holidays sheet created');
+}
+
+/**
+ * Creates the Business_Exceptions sheet
+ */
+function createBusinessExceptionsSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = 'Business_Exceptions';
+
+  deleteSheetIfExists(sheetName);
+  const sheet = ss.insertSheet(sheetName);
+
+  const headers = ['exception_id', 'date', 'start_time', 'end_time', 'reason', 'notes'];
+  sheet.appendRow(headers);
+
+  formatHeaderRow(sheet, headers.length);
+
+  // Set column widths
+  sheet.setColumnWidth(1, 100);  // exception_id
+  sheet.setColumnWidth(2, 120);  // date
+  sheet.setColumnWidth(3, 100);  // start_time
+  sheet.setColumnWidth(4, 100);  // end_time
+  sheet.setColumnWidth(5, 200);  // reason
+  sheet.setColumnWidth(6, 300);  // notes
+
+  // Add auto-increment formula for exception_id
+  addAutoIncrementFormula(sheet, 'EXC', 'B');
+
+  // Add data validation
+  addDateValidation(sheet, 'B2:B1000', false);  // Date required
+  addTimeValidation(sheet, 'C2:C1000');  // Start time
+  addTimeValidation(sheet, 'D2:D1000');  // End time
+
+  Logger.log('Business_Exceptions sheet created');
 }
 
 /**
