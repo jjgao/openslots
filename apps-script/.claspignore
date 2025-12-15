@@ -1,0 +1,7 @@
+# Ignore files that shouldn't be pushed to Apps Script
+.clasp.json
+.claspignore
+README.md
+package.json
+package-lock.json
+node_modules/**

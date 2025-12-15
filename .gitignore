@@ -1,0 +1,22 @@
+# clasp - Don't commit credentials or script IDs
+.clasp.json
+~/.clasprc.json
+
+# Node modules
+node_modules/
+package-lock.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.local
