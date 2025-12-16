@@ -245,18 +245,21 @@ function testPhoneValidation() {
     testSheet.appendRow(['phone']);
     addPhoneValidation(testSheet, 'A2:A10', false);
 
-    const validation = testSheet.getRange('A2').getDataValidation();
+    // Check for text format (no actual validation rule, just formatting)
+    const numberFormat = testSheet.getRange('A2').getNumberFormat();
+    const note = testSheet.getRange('A2').getNote();
 
     ss.deleteSheet(testSheet);
 
-    const hasValidation = validation !== null;
+    const hasTextFormat = numberFormat === '@';
+    const hasNote = note.includes('phone number');
 
     return {
       name: testName,
-      passed: hasValidation,
-      message: hasValidation
-        ? 'Phone validation rule applied'
-        : 'No validation rule found'
+      passed: hasTextFormat && hasNote,
+      message: hasTextFormat && hasNote
+        ? 'Phone formatting and note applied correctly'
+        : `Format: ${numberFormat}, Note: ${note}`
     };
   } catch (error) {
     return {
