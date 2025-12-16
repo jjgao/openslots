@@ -116,16 +116,27 @@ function isTodayOrFuture(date) {
 }
 
 /**
- * Creates a Date object from date and time strings
+ * Creates a Date object from date and time values
  * Uses timezone-aware parsing to avoid date shifting issues.
- * @param {Date|string} date - The date
- * @param {string} time - Time in HH:MM format
+ * @param {Date|string} date - The date (Date object or YYYY-MM-DD string)
+ * @param {Date|string} time - Time (Date object from Sheets or HH:MM string)
  * @returns {Date} Combined Date object in script timezone
  */
 function combineDateAndTime(date, time) {
-  const timeParts = time.toString().split(':');
-  const hours = parseInt(timeParts[0], 10) || 0;
-  const minutes = parseInt(timeParts[1], 10) || 0;
+  let hours = 0;
+  let minutes = 0;
+
+  // Handle time - can be Date object (from Sheets) or string (HH:MM)
+  if (time instanceof Date) {
+    // Google Sheets returns time as Date object (with date portion as Dec 30, 1899)
+    hours = time.getHours();
+    minutes = time.getMinutes();
+  } else if (time) {
+    // String format "HH:MM"
+    const timeParts = time.toString().split(':');
+    hours = parseInt(timeParts[0], 10) || 0;
+    minutes = parseInt(timeParts[1], 10) || 0;
+  }
 
   if (typeof date === 'string') {
     // Parse date string in script timezone to avoid UTC midnight issue
