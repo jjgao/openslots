@@ -32,6 +32,7 @@ function addSampleData() {
     addSampleAppointments();
     addSampleActivityLog();
     addSampleConfirmationTracking();
+    addSampleSystemConfig();
     addSampleBusinessHolidays();
     addSampleBusinessExceptions();
 
@@ -443,4 +444,32 @@ function addSampleBusinessExceptions() {
   }
 
   Logger.log('Sample business exceptions added: ' + sampleData.length);
+}
+
+/**
+ * Adds sample system configuration settings
+ */
+function addSampleSystemConfig() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('System_Config');
+
+  const sampleData = [
+    ['business_name', 'OpenSlots Appointment Center'],
+    ['business_hours_start', '09:00'],
+    ['business_hours_end', '17:00'],
+    ['business_days', 'Monday,Tuesday,Wednesday,Thursday,Friday'],
+    ['default_appointment_duration', '30'],
+    ['appointment_slot_increment', '15'],
+    ['timezone', 'America/New_York'],
+    ['enable_email_notifications', 'Yes'],
+    ['enable_sms_notifications', 'No'],
+    ['max_advance_booking_days', '90'],
+    ['min_cancellation_notice_hours', '24'],
+    ['late_arrival_threshold_minutes', '15']
+  ];
+
+  for (let i = 0; i < sampleData.length; i++) {
+    sheet.getRange(i + 2, 1, 1, sampleData[i].length).setValues([sampleData[i]]);
+  }
+
+  Logger.log('Sample system config added: ' + sampleData.length + ' settings');
 }
