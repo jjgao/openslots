@@ -534,3 +534,468 @@ function cleanupTestSheets() {
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
+
+/**
+ * MVP2 Test Suite - Tests for Calendar Integration + Basic Automation
+ */
+function runMvp2Tests() {
+  const ui = SpreadsheetApp.getUi();
+
+  ui.alert(
+    'Running MVP2 Tests',
+    'This will run tests for:\n' +
+    '• Configuration functions\n' +
+    '• Availability checking\n' +
+    '• Appointment booking\n' +
+    '• Time utilities\n\n' +
+    'This may take 30-60 seconds.',
+    ui.ButtonSet.OK
+  );
+
+  Logger.log('========================================');
+  Logger.log('Starting MVP2 Test Suite');
+  Logger.log('========================================');
+
+  const results = [];
+
+  // Config tests
+  results.push(testGetConfig());
+  results.push(testSetConfig());
+  results.push(testGetAllConfig());
+
+  // Utility tests
+  results.push(testTimeConversion());
+  results.push(testDateNormalization());
+  results.push(testTimeRangeOverlap());
+
+  // Availability tests
+  results.push(testGetProviderAvailability());
+  results.push(testIsSlotAvailable());
+  results.push(testGetAvailableSlots());
+
+  // Appointment tests
+  results.push(testAppointmentValidation());
+  results.push(testBookAppointment());
+
+  // DataAccess tests
+  results.push(testGetSheetData());
+  results.push(testFindRecords());
+
+  displayTestResults(results);
+
+  Logger.log('========================================');
+  Logger.log('MVP2 Test Suite Complete');
+  Logger.log('========================================');
+}
+
+/**
+ * Test: getConfig function
+ */
+function testGetConfig() {
+  const testName = 'Config: getConfig()';
+
+  try {
+    // Test getting existing config
+    const businessName = getConfig('business_name');
+
+    // Test getting non-existent config with default
+    const notFound = getConfig('nonexistent_setting', 'default_value');
+
+    const hasBusinessName = businessName && businessName.length > 0;
+    const hasDefault = notFound === 'default_value';
+
+    return {
+      name: testName,
+      passed: hasBusinessName && hasDefault,
+      message: hasBusinessName && hasDefault
+        ? `Config retrieved: "${businessName}", default works`
+        : `Failed: businessName=${businessName}, default=${notFound}`
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: setConfig function
+ */
+function testSetConfig() {
+  const testName = 'Config: setConfig()';
+
+  try {
+    const testKey = 'test_setting_' + Date.now();
+    const testValue = 'test_value_123';
+
+    // Set a test config
+    const setResult = setConfig(testKey, testValue);
+
+    // Read it back
+    invalidateConfigCache();
+    const readValue = getConfig(testKey);
+
+    // Clean up - delete the test row
+    const sheet = getSheet(CONFIG_SHEET_NAME);
+    if (sheet) {
+      const data = sheet.getDataRange().getValues();
+      for (let i = data.length - 1; i >= 1; i--) {
+        if (data[i][0] === testKey) {
+          sheet.deleteRow(i + 1);
+          break;
+        }
+      }
+    }
+
+    const passed = setResult && readValue === testValue;
+
+    return {
+      name: testName,
+      passed: passed,
+      message: passed
+        ? 'Config set and retrieved successfully'
+        : `Failed: set=${setResult}, read=${readValue}`
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: getAllConfig function
+ */
+function testGetAllConfig() {
+  const testName = 'Config: getAllConfig()';
+
+  try {
+    const config = getAllConfig();
+
+    const isObject = typeof config === 'object';
+    const hasKeys = Object.keys(config).length > 0;
+
+    return {
+      name: testName,
+      passed: isObject && hasKeys,
+      message: isObject && hasKeys
+        ? `Retrieved ${Object.keys(config).length} config settings`
+        : 'Failed to retrieve config'
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: Time conversion utilities
+ */
+function testTimeConversion() {
+  const testName = 'Utils: Time conversion';
+
+  try {
+    // Test parseTimeToMinutes
+    const minutes1 = parseTimeToMinutes('09:30');
+    const expected1 = 9 * 60 + 30; // 570
+
+    const minutes2 = parseTimeToMinutes('14:00');
+    const expected2 = 14 * 60; // 840
+
+    // Test minutesToTimeString
+    const time1 = minutesToTimeString(570);
+    const time2 = minutesToTimeString(840);
+
+    const passed = minutes1 === expected1 &&
+                   minutes2 === expected2 &&
+                   time1 === '09:30' &&
+                   time2 === '14:00';
+
+    return {
+      name: testName,
+      passed: passed,
+      message: passed
+        ? 'Time conversions work correctly'
+        : `Failed: ${minutes1}!=${expected1}, ${minutes2}!=${expected2}, ${time1}, ${time2}`
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: Date normalization
+ */
+function testDateNormalization() {
+  const testName = 'Utils: Date normalization';
+
+  try {
+    const date1 = normalizeDate(new Date(2024, 0, 15)); // Jan 15, 2024
+    const date2 = normalizeDate('2024-01-15');
+    const date3 = normalizeDate(new Date('2024-01-15'));
+
+    const allMatch = date1 === '2024-01-15' &&
+                     date2 === '2024-01-15' &&
+                     date3 === '2024-01-15';
+
+    return {
+      name: testName,
+      passed: allMatch,
+      message: allMatch
+        ? 'Date normalization works correctly'
+        : `Failed: ${date1}, ${date2}, ${date3}`
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: Time range overlap detection
+ */
+function testTimeRangeOverlap() {
+  const testName = 'Utils: Time range overlap';
+
+  try {
+    // Overlapping ranges
+    const overlap1 = timeRangesOverlap('09:00', '10:00', '09:30', '10:30'); // true
+    const overlap2 = timeRangesOverlap('09:00', '11:00', '10:00', '10:30'); // true
+
+    // Non-overlapping ranges
+    const noOverlap1 = timeRangesOverlap('09:00', '10:00', '10:00', '11:00'); // false
+    const noOverlap2 = timeRangesOverlap('09:00', '10:00', '11:00', '12:00'); // false
+
+    const passed = overlap1 === true &&
+                   overlap2 === true &&
+                   noOverlap1 === false &&
+                   noOverlap2 === false;
+
+    return {
+      name: testName,
+      passed: passed,
+      message: passed
+        ? 'Overlap detection works correctly'
+        : `Failed: ${overlap1}, ${overlap2}, ${noOverlap1}, ${noOverlap2}`
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: getProviderAvailability
+ */
+function testGetProviderAvailability() {
+  const testName = 'Availability: getProviderAvailability()';
+
+  try {
+    // Test with a known provider and date
+    const providers = getProviders(true);
+    if (providers.length === 0) {
+      return { name: testName, passed: false, message: 'No providers found - add sample data first' };
+    }
+
+    const providerId = providers[0].provider_id;
+    const testDate = addDays(new Date(), 7); // Next week
+
+    const availability = getProviderAvailability(providerId, testDate);
+
+    // Availability should be an array
+    const isArray = Array.isArray(availability);
+
+    return {
+      name: testName,
+      passed: isArray,
+      message: isArray
+        ? `Found ${availability.length} availability window(s) for ${providerId}`
+        : 'Failed: result is not an array'
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: isSlotAvailable
+ */
+function testIsSlotAvailable() {
+  const testName = 'Availability: isSlotAvailable()';
+
+  try {
+    const providers = getProviders(true);
+    if (providers.length === 0) {
+      return { name: testName, passed: false, message: 'No providers found' };
+    }
+
+    const providerId = providers[0].provider_id;
+    const testDate = addDays(new Date(), 7);
+
+    // This should return a boolean
+    const result = isSlotAvailable(providerId, testDate, '10:00', 30);
+    const isBoolean = typeof result === 'boolean';
+
+    return {
+      name: testName,
+      passed: isBoolean,
+      message: isBoolean
+        ? `Slot availability check returned: ${result}`
+        : 'Failed: result is not a boolean'
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: getAvailableSlots
+ */
+function testGetAvailableSlots() {
+  const testName = 'Availability: getAvailableSlots()';
+
+  try {
+    const providers = getProviders(true);
+    if (providers.length === 0) {
+      return { name: testName, passed: false, message: 'No providers found' };
+    }
+
+    const providerId = providers[0].provider_id;
+    const testDate = addDays(new Date(), 7);
+
+    const slots = getAvailableSlots(providerId, testDate, 30);
+
+    const isArray = Array.isArray(slots);
+    const hasCorrectFormat = slots.length === 0 || (slots[0].startTime && slots[0].endTime);
+
+    return {
+      name: testName,
+      passed: isArray && hasCorrectFormat,
+      message: isArray && hasCorrectFormat
+        ? `Found ${slots.length} available slot(s)`
+        : 'Failed: incorrect result format'
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: Appointment data validation
+ */
+function testAppointmentValidation() {
+  const testName = 'Appointments: Validation';
+
+  try {
+    // Test missing fields
+    const result1 = validateAppointmentData({});
+    const result2 = validateAppointmentData({ clientId: 'CLI001' });
+
+    // Test valid data
+    const validData = {
+      clientId: 'CLI001',
+      providerId: 'PROV001',
+      serviceId: 'SERV001',
+      date: '2024-12-20',
+      startTime: '10:00',
+      duration: 30
+    };
+    const result3 = validateAppointmentData(validData);
+
+    // Test invalid time format
+    const invalidTime = { ...validData, startTime: 'invalid' };
+    const result4 = validateAppointmentData(invalidTime);
+
+    const passed = !result1.valid &&
+                   !result2.valid &&
+                   result3.valid &&
+                   !result4.valid;
+
+    return {
+      name: testName,
+      passed: passed,
+      message: passed
+        ? 'Validation correctly identifies valid and invalid data'
+        : `Failed: empty=${result1.valid}, partial=${result2.valid}, valid=${result3.valid}, badTime=${result4.valid}`
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: bookAppointment function (without actually creating)
+ */
+function testBookAppointment() {
+  const testName = 'Appointments: bookAppointment()';
+
+  try {
+    // Test with invalid data - should fail gracefully
+    const result1 = bookAppointment({});
+
+    // Test with non-existent client
+    const result2 = bookAppointment({
+      clientId: 'NONEXISTENT',
+      providerId: 'PROV001',
+      serviceId: 'SERV001',
+      date: normalizeDate(addDays(new Date(), 7)),
+      startTime: '10:00',
+      duration: 30,
+      createCalendarEvent: false
+    });
+
+    const failsCorrectly = !result1.success && !result2.success;
+
+    return {
+      name: testName,
+      passed: failsCorrectly,
+      message: failsCorrectly
+        ? 'bookAppointment correctly handles invalid inputs'
+        : `Failed: empty=${result1.success}, badClient=${result2.success}`
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: getSheetData
+ */
+function testGetSheetData() {
+  const testName = 'DataAccess: getSheetData()';
+
+  try {
+    const providers = getSheetData(SHEETS.PROVIDERS);
+    const services = getSheetData(SHEETS.SERVICES);
+
+    const providersIsArray = Array.isArray(providers);
+    const servicesIsArray = Array.isArray(services);
+
+    return {
+      name: testName,
+      passed: providersIsArray && servicesIsArray,
+      message: providersIsArray && servicesIsArray
+        ? `Providers: ${providers.length}, Services: ${services.length}`
+        : 'Failed to get sheet data'
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: findRecords
+ */
+function testFindRecords() {
+  const testName = 'DataAccess: findRecords()';
+
+  try {
+    // Find all active providers
+    const activeProviders = findRecords(SHEETS.PROVIDERS, { active_status: 'Active' });
+
+    const isArray = Array.isArray(activeProviders);
+
+    return {
+      name: testName,
+      passed: isArray,
+      message: isArray
+        ? `Found ${activeProviders.length} active provider(s)`
+        : 'Failed: result is not an array'
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}

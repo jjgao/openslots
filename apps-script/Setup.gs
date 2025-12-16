@@ -20,11 +20,17 @@ function onOpen() {
     .addItem('Initialize System', 'initializeSystem')
     .addItem('Add Sample Data', 'addSampleData')
     .addSeparator()
+    .addSubMenu(ui.createMenu('Calendar')
+      .addItem('Sync Missing Calendar Events', 'syncAllMissingCalendarEvents')
+      .addItem('Setup Edit Trigger', 'setupOnEditTrigger')
+      .addItem('Remove Edit Trigger', 'removeOnEditTrigger'))
+    .addSeparator()
     .addItem('Clear All Data', 'clearAllData')
     .addSeparator()
     .addSubMenu(ui.createMenu('Tests')
       .addItem('Run All Tests', 'runAllTests')
       .addItem('Run Quick Tests', 'runQuickTests')
+      .addItem('Run MVP2 Tests', 'runMvp2Tests')
       .addItem('Cleanup Test Sheets', 'cleanupTestSheets'))
     .addSeparator()
     .addItem('About', 'showAbout')
@@ -38,11 +44,16 @@ function showAbout() {
   const ui = SpreadsheetApp.getUi();
   ui.alert(
     'Appointment Booking System',
-    'Version: MVP 1.0\n\n' +
+    'Version: MVP 2.0 - Calendar Integration\n\n' +
     'This system manages appointments for multiple service providers.\n\n' +
+    'Features:\n' +
+    '• Automatic calendar event creation\n' +
+    '• Availability checking\n' +
+    '• Double-booking prevention\n' +
+    '• Activity logging\n\n' +
     'To set up:\n' +
     '1. Click "Appointment System → Initialize System"\n' +
-    '2. Wait for completion\n' +
+    '2. Click "Appointment System → Calendar → Setup Edit Trigger"\n' +
     '3. All sheets will be created automatically\n\n' +
     'For help: https://github.com/jjgao/openslots',
     ui.ButtonSet.OK
