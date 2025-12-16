@@ -332,6 +332,68 @@ function clearProviderCalendarEvents(providerId) {
 }
 
 /**
+ * Deletes a provider's dedicated calendar entirely
+ * Uses the Calendar Advanced Service to delete the calendar.
+ *
+ * @param {string} providerId - The provider ID
+ * @returns {Object} Result object with success status
+ */
+function deleteProviderCalendar(providerId) {
+  try {
+    const provider = getProvider(providerId);
+    if (!provider || !provider.calendar_id) {
+      return { success: true, message: 'No calendar to delete' };
+    }
+
+    // Use Calendar Advanced Service to delete the calendar
+    try {
+      Calendar.Calendars.remove(provider.calendar_id);
+      Logger.log(`Deleted calendar for provider ${provider.name}: ${provider.calendar_id}`);
+    } catch (e) {
+      // Calendar might already be deleted or not accessible
+      Logger.log(`Could not delete calendar: ${e.toString()}`);
+    }
+
+    // Clear the calendar_id from provider record
+    updateRecordById(SHEETS.PROVIDERS, providerId, {
+      calendar_id: ''
+    });
+
+    return { success: true };
+
+  } catch (error) {
+    Logger.log(`Error deleting provider calendar: ${error.toString()}`);
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * Deletes all OpenSlots provider calendars
+ * Useful for complete cleanup/reset.
+ *
+ * @returns {Object} Result with count of deleted calendars
+ */
+function deleteAllProviderCalendars() {
+  const providers = getProviders();
+  let deleted = 0;
+  let failed = 0;
+
+  for (let i = 0; i < providers.length; i++) {
+    if (providers[i].calendar_id) {
+      const result = deleteProviderCalendar(providers[i].provider_id);
+      if (result.success) {
+        deleted++;
+      } else {
+        failed++;
+      }
+    }
+  }
+
+  Logger.log(`Deleted ${deleted} provider calendars, ${failed} failed`);
+  return { deleted: deleted, failed: failed };
+}
+
+/**
  * Builds the event title
  * @param {string} serviceName - Name of the service
  * @param {string} clientName - Name of the client

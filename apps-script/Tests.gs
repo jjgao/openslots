@@ -545,8 +545,9 @@ function cleanupTestData() {
   const confirm = ui.alert(
     'Cleanup Test Data',
     'This will:\n' +
-    '• Delete all calendar events created by OpenSlots\n' +
-    '• Clear calendar_event_id from appointments\n\n' +
+    '• Delete all OpenSlots provider calendars\n' +
+    '• Clear calendar_event_id from appointments\n' +
+    '• Clear calendar_id from providers\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
   );
@@ -555,19 +556,11 @@ function cleanupTestData() {
     return;
   }
 
-  let eventsDeleted = 0;
-  let appointmentsCleared = 0;
-
-  // Get all providers and clear their calendar events
-  const providers = getProviders();
-  for (let i = 0; i < providers.length; i++) {
-    const result = clearProviderCalendarEvents(providers[i].provider_id);
-    if (result.success) {
-      eventsDeleted += result.deleted || 0;
-    }
-  }
+  // Delete all provider calendars (this also clears calendar_id from providers)
+  const calResult = deleteAllProviderCalendars();
 
   // Clear calendar_event_id from all appointments
+  let appointmentsCleared = 0;
   const appointments = getAppointments();
   for (let i = 0; i < appointments.length; i++) {
     if (appointments[i].calendar_event_id) {
@@ -580,12 +573,12 @@ function cleanupTestData() {
 
   ui.alert(
     'Cleanup Complete',
-    `Deleted ${eventsDeleted} calendar event(s)\n` +
+    `Deleted ${calResult.deleted} provider calendar(s)\n` +
     `Cleared ${appointmentsCleared} appointment reference(s)`,
     ui.ButtonSet.OK
   );
 
-  Logger.log(`Test data cleanup: ${eventsDeleted} events deleted, ${appointmentsCleared} appointments cleared`);
+  Logger.log(`Test data cleanup: ${calResult.deleted} calendars deleted, ${appointmentsCleared} appointments cleared`);
 }
 
 /**
