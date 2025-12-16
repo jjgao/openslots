@@ -227,30 +227,107 @@ function deleteCalendarEvent(appointmentId) {
 
 /**
  * Gets or creates a calendar for a provider
+ * Creates a dedicated calendar named "OpenSlots - [Provider Name]" for each provider.
+ * Stores the calendar ID in the provider record for future lookups.
+ *
  * @param {Object} provider - Provider object
  * @returns {Calendar|null} Calendar object or null
  */
 function getOrCreateProviderCalendar(provider) {
   try {
-    // First, try to use the provider's email as calendar ID
-    if (provider.email && isValidEmail(provider.email)) {
-      try {
-        const calendar = CalendarApp.getCalendarById(provider.email);
-        if (calendar) {
-          return calendar;
-        }
-      } catch (e) {
-        // Calendar not accessible, fall through to default
-        Logger.log(`Provider calendar not accessible: ${provider.email}`);
+    // Check if provider already has a calendar ID stored
+    if (provider.calendar_id) {
+      const existingCalendar = CalendarApp.getCalendarById(provider.calendar_id);
+      if (existingCalendar) {
+        return existingCalendar;
+      }
+      // Calendar was deleted externally, clear the stored ID and create new one
+      Logger.log(`Stored calendar not found, creating new one for ${provider.name}`);
+    }
+
+    // Create a dedicated calendar for this provider
+    const calendarName = `OpenSlots - ${provider.name}`;
+
+    // Check if calendar with this name already exists
+    const allCalendars = CalendarApp.getAllCalendars();
+    for (let i = 0; i < allCalendars.length; i++) {
+      if (allCalendars[i].getName() === calendarName) {
+        // Found existing calendar, store the ID and return it
+        const calId = allCalendars[i].getId();
+        updateRecordById(SHEETS.PROVIDERS, provider.provider_id, {
+          calendar_id: calId
+        });
+        Logger.log(`Found existing calendar for ${provider.name}: ${calId}`);
+        return allCalendars[i];
       }
     }
 
-    // Use the default calendar for the script owner
-    return CalendarApp.getDefaultCalendar();
+    // Create new calendar
+    const newCalendar = CalendarApp.createCalendar(calendarName, {
+      summary: `Appointments for ${provider.name}`,
+      timeZone: Session.getScriptTimeZone()
+    });
+
+    // Store the calendar ID in the provider record
+    const newCalId = newCalendar.getId();
+    updateRecordById(SHEETS.PROVIDERS, provider.provider_id, {
+      calendar_id: newCalId
+    });
+
+    Logger.log(`Created new calendar for ${provider.name}: ${newCalId}`);
+    return newCalendar;
 
   } catch (error) {
-    Logger.log(`Error getting calendar: ${error.toString()}`);
-    return null;
+    Logger.log(`Error getting/creating calendar: ${error.toString()}`);
+    // Fall back to default calendar if calendar creation fails
+    return CalendarApp.getDefaultCalendar();
+  }
+}
+
+/**
+ * Deletes all events from a provider's calendar (for cleanup)
+ * Does not delete the calendar itself, just clears events.
+ *
+ * @param {string} providerId - The provider ID
+ * @returns {Object} Result object with count of deleted events
+ */
+function clearProviderCalendarEvents(providerId) {
+  try {
+    const provider = getProvider(providerId);
+    if (!provider || !provider.calendar_id) {
+      return { success: true, deleted: 0 };
+    }
+
+    const calendar = CalendarApp.getCalendarById(provider.calendar_id);
+    if (!calendar) {
+      return { success: true, deleted: 0 };
+    }
+
+    // Get all events from today onwards
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date();
+    endDate.setFullYear(endDate.getFullYear() + 1); // Look ahead 1 year
+
+    const events = calendar.getEvents(startDate, endDate);
+    let deleted = 0;
+
+    for (let i = 0; i < events.length; i++) {
+      // Only delete OpenSlots events (check description)
+      const desc = events[i].getDescription() || '';
+      if (desc.includes('Managed by OpenSlots') || desc.includes('Appointment ID:')) {
+        events[i].deleteEvent();
+        deleted++;
+      }
+    }
+
+    Logger.log(`Cleared ${deleted} calendar events for provider ${providerId}`);
+    return { success: true, deleted: deleted };
+
+  } catch (error) {
+    Logger.log(`Error clearing calendar events: ${error.toString()}`);
+    return { success: false, error: error.toString() };
   }
 }
 

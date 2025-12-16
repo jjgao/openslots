@@ -31,7 +31,9 @@ function onOpen() {
       .addItem('Run All Tests', 'runAllTests')
       .addItem('Run Quick Tests', 'runQuickTests')
       .addItem('Run MVP2 Tests', 'runMvp2Tests')
-      .addItem('Cleanup Test Sheets', 'cleanupTestSheets'))
+      .addSeparator()
+      .addItem('Cleanup Test Sheets', 'cleanupTestSheets')
+      .addItem('Cleanup Calendar Events', 'cleanupTestData'))
     .addSeparator()
     .addItem('About', 'showAbout')
     .addToUi();
@@ -142,7 +144,7 @@ function createProvidersSheet() {
   const sheet = ss.insertSheet(sheetName);
 
   // Add headers
-  const headers = ['provider_id', 'name', 'email', 'phone', 'services_offered', 'active_status'];
+  const headers = ['provider_id', 'name', 'email', 'phone', 'services_offered', 'active_status', 'calendar_id'];
   sheet.appendRow(headers);
 
   // Format header row
@@ -163,6 +165,7 @@ function createProvidersSheet() {
   sheet.setColumnWidth(4, 120);  // phone
   sheet.setColumnWidth(5, 180);  // services_offered
   sheet.setColumnWidth(6, 120);  // active_status
+  sheet.setColumnWidth(7, 250);  // calendar_id (auto-populated)
 
   Logger.log('Providers sheet created');
 }

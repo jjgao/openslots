@@ -536,6 +536,59 @@ function cleanupTestSheets() {
 }
 
 /**
+ * Clean up test data including calendar events
+ * Removes test appointments and their associated calendar events
+ */
+function cleanupTestData() {
+  const ui = SpreadsheetApp.getUi();
+
+  const confirm = ui.alert(
+    'Cleanup Test Data',
+    'This will:\n' +
+    '• Delete all calendar events created by OpenSlots\n' +
+    '• Clear calendar_event_id from appointments\n\n' +
+    'Continue?',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm !== ui.Button.YES) {
+    return;
+  }
+
+  let eventsDeleted = 0;
+  let appointmentsCleared = 0;
+
+  // Get all providers and clear their calendar events
+  const providers = getProviders();
+  for (let i = 0; i < providers.length; i++) {
+    const result = clearProviderCalendarEvents(providers[i].provider_id);
+    if (result.success) {
+      eventsDeleted += result.deleted || 0;
+    }
+  }
+
+  // Clear calendar_event_id from all appointments
+  const appointments = getAppointments();
+  for (let i = 0; i < appointments.length; i++) {
+    if (appointments[i].calendar_event_id) {
+      updateRecordById(SHEETS.APPOINTMENTS, appointments[i].appointment_id, {
+        calendar_event_id: ''
+      });
+      appointmentsCleared++;
+    }
+  }
+
+  ui.alert(
+    'Cleanup Complete',
+    `Deleted ${eventsDeleted} calendar event(s)\n` +
+    `Cleared ${appointmentsCleared} appointment reference(s)`,
+    ui.ButtonSet.OK
+  );
+
+  Logger.log(`Test data cleanup: ${eventsDeleted} events deleted, ${appointmentsCleared} appointments cleared`);
+}
+
+/**
  * MVP2 Test Suite - Tests for Calendar Integration + Basic Automation
  */
 function runMvp2Tests() {
