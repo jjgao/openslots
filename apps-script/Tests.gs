@@ -725,9 +725,19 @@ function testDateNormalization() {
   const testName = 'Utils: Date normalization';
 
   try {
+    // Test 1: Date object created with year, month, day (correct - local timezone)
     const date1 = normalizeDate(new Date(2024, 0, 15)); // Jan 15, 2024
+
+    // Test 2: String input (our fix handles this correctly)
     const date2 = normalizeDate('2024-01-15');
-    const date3 = normalizeDate(new Date('2024-01-15'));
+
+    // Test 3: Date created via parseDateInTimezone (correct way to create from string)
+    const date3 = normalizeDate(parseDateInTimezone('2024-01-15'));
+
+    // Note: new Date('2024-01-15') parses as UTC midnight, which shifts to
+    // previous day in western timezones. This is a JavaScript pitfall that
+    // can't be fixed once the Date object is created. Always use
+    // parseDateInTimezone() or new Date(year, month, day) instead.
 
     const allMatch = date1 === '2024-01-15' &&
                      date2 === '2024-01-15' &&
