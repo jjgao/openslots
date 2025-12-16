@@ -18,7 +18,7 @@
  * @returns {Array<Object>} Array of available time windows {start, end}
  */
 function getProviderAvailability(providerId, date) {
-  const targetDate = typeof date === 'string' ? new Date(date) : date;
+  const targetDate = typeof date === 'string' ? parseDateInTimezone(date) : date;
   const dayName = getDayName(targetDate);
 
   // Step 1: Check if it's a business holiday

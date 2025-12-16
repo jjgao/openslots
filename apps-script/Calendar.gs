@@ -361,10 +361,10 @@ function getProviderCalendarEvents(providerId, date) {
       return [];
     }
 
-    const startOfDay = new Date(date);
+    const startOfDay = typeof date === 'string' ? parseDateInTimezone(date) : new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
 
-    const endOfDay = new Date(date);
+    const endOfDay = typeof date === 'string' ? parseDateInTimezone(date) : new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
     return calendar.getEvents(startOfDay, endOfDay);

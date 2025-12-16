@@ -490,12 +490,16 @@ function getBusinessExceptionsForDate(date) {
 function isBusinessHoliday(date) {
   const holidays = getBusinessHolidays();
   const targetDate = normalizeDate(date);
-  const targetMonth = new Date(date).getMonth();
-  const targetDay = new Date(date).getDate();
+  // Parse date in timezone to get correct month/day
+  const parsedDate = typeof date === 'string' ? parseDateInTimezone(date) : date;
+  const targetMonth = parsedDate.getMonth();
+  const targetDay = parsedDate.getDate();
 
   for (let i = 0; i < holidays.length; i++) {
     const holiday = holidays[i];
-    const holidayDate = new Date(holiday.date);
+    const holidayDate = typeof holiday.date === 'string'
+      ? parseDateInTimezone(holiday.date)
+      : holiday.date;
 
     // For recurring holidays, check month and day
     if (holiday.recurring === 'Yes') {
@@ -516,6 +520,7 @@ function isBusinessHoliday(date) {
 
 /**
  * Normalizes a date to YYYY-MM-DD string format
+ * Uses timezone-aware parsing to avoid date shifting issues.
  * @param {Date|string} date - The date to normalize
  * @returns {string} Date in YYYY-MM-DD format
  */
@@ -525,12 +530,15 @@ function normalizeDate(date) {
   }
 
   if (typeof date === 'string') {
-    // Already a string, try to parse and reformat
-    const parsed = new Date(date);
-    if (isNaN(parsed.getTime())) {
-      return date; // Return as-is if can't parse
+    // If already in YYYY-MM-DD format, return as-is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) {
+      return date.trim();
     }
-    date = parsed;
+    // Parse in timezone to avoid UTC midnight shift
+    date = parseDateInTimezone(date);
+    if (isNaN(date.getTime())) {
+      return ''; // Return empty if can't parse
+    }
   }
 
   const year = date.getFullYear();

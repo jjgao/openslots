@@ -5,6 +5,21 @@
  */
 
 /**
+ * Parses a date string in the script's timezone to avoid UTC midnight issues.
+ * new Date('YYYY-MM-DD') parses as UTC midnight, which shifts to previous day
+ * in western timezones. This function parses in local timezone.
+ * @param {string} dateStr - Date string in YYYY-MM-DD format
+ * @returns {Date} Date object at midnight in script timezone
+ */
+function parseDateInTimezone(dateStr) {
+  if (!dateStr) {
+    return new Date();
+  }
+  // Parse as noon to avoid any DST edge cases, then we only care about the date portion
+  return Utilities.parseDate(dateStr + ' 12:00:00', Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+}
+
+/**
  * Parses a time string to minutes since midnight
  * @param {string|Date} time - Time string (HH:MM format) or Date object
  * @returns {number} Minutes since midnight
@@ -50,7 +65,7 @@ function getDayName(date) {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   if (typeof date === 'string') {
-    date = new Date(date);
+    date = parseDateInTimezone(date);
   }
 
   return days[date.getDay()];
@@ -72,7 +87,7 @@ function isSameDate(date1, date2) {
  * @returns {boolean} True if date is in the future
  */
 function isFutureDate(date) {
-  const targetDate = new Date(date);
+  const targetDate = typeof date === 'string' ? parseDateInTimezone(date) : new Date(date);
   const today = new Date();
 
   // Set both to start of day for comparison
@@ -102,21 +117,26 @@ function isTodayOrFuture(date) {
 
 /**
  * Creates a Date object from date and time strings
+ * Uses timezone-aware parsing to avoid date shifting issues.
  * @param {Date|string} date - The date
  * @param {string} time - Time in HH:MM format
- * @returns {Date} Combined Date object
+ * @returns {Date} Combined Date object in script timezone
  */
 function combineDateAndTime(date, time) {
-  const d = typeof date === 'string' ? new Date(date) : new Date(date);
   const timeParts = time.toString().split(':');
+  const hours = parseInt(timeParts[0], 10) || 0;
+  const minutes = parseInt(timeParts[1], 10) || 0;
 
-  d.setHours(
-    parseInt(timeParts[0], 10) || 0,
-    parseInt(timeParts[1], 10) || 0,
-    0,
-    0
-  );
+  if (typeof date === 'string') {
+    // Parse date string in script timezone to avoid UTC midnight issue
+    // new Date('YYYY-MM-DD') parses as UTC midnight, which shifts day in western timezones
+    const dateStr = `${date} ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+    return Utilities.parseDate(dateStr, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+  }
 
+  // For Date objects, create a new date and set the time
+  const d = new Date(date);
+  d.setHours(hours, minutes, 0, 0);
   return d;
 }
 

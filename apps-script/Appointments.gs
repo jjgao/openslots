@@ -203,9 +203,10 @@ function validateAppointmentData(data) {
  * @returns {Object} Validation result {valid, error}
  */
 function validateAppointmentDateTime(date, startTime) {
-  const appointmentDate = new Date(date);
+  const appointmentDate = parseDateInTimezone(date);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  appointmentDate.setHours(0, 0, 0, 0);
 
   // Check if date is in the past
   if (appointmentDate < today) {
