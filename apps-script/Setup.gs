@@ -204,7 +204,7 @@ function createClientsSheet() {
   deleteSheetIfExists(sheetName);
   const sheet = ss.insertSheet(sheetName);
 
-  const headers = ['client_id', 'name', 'phone', 'email', 'is_member', 'notes', 'first_visit_date', 'last_visit_date'];
+  const headers = ['client_id', 'name', 'phone', 'email', 'notes', 'first_visit_date', 'last_visit_date'];
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
@@ -213,18 +213,16 @@ function createClientsSheet() {
   // Add data validation
   addPhoneValidation(sheet, 'C2:C1000', false);  // phone (required)
   addEmailValidation(sheet, 'D2:D1000', true);   // email (optional)
-  addDropdownValidation(sheet, 'E2:E1000', ['Yes', 'No'], 'Is this client a member?');  // is_member
-  addDateValidation(sheet, 'G2:G1000', true);    // first_visit_date
-  addDateValidation(sheet, 'H2:H1000', true);    // last_visit_date
+  addDateValidation(sheet, 'F2:F1000', true);    // first_visit_date
+  addDateValidation(sheet, 'G2:G1000', true);    // last_visit_date
 
   sheet.setColumnWidth(1, 100);  // client_id
   sheet.setColumnWidth(2, 150);  // name
   sheet.setColumnWidth(3, 120);  // phone
   sheet.setColumnWidth(4, 200);  // email
-  sheet.setColumnWidth(5, 100);  // is_member
-  sheet.setColumnWidth(6, 250);  // notes
-  sheet.setColumnWidth(7, 130);  // first_visit_date
-  sheet.setColumnWidth(8, 130);  // last_visit_date
+  sheet.setColumnWidth(5, 250);  // notes
+  sheet.setColumnWidth(6, 130);  // first_visit_date
+  sheet.setColumnWidth(7, 130);  // last_visit_date
 
   Logger.log('Clients sheet created');
 }
