@@ -20,12 +20,20 @@ function onOpen() {
     .addItem('Initialize System', 'initializeSystem')
     .addItem('Add Sample Data', 'addSampleData')
     .addSeparator()
+    .addSubMenu(ui.createMenu('Calendar')
+      .addItem('Sync Missing Calendar Events', 'syncAllMissingCalendarEvents')
+      .addItem('Setup Edit Trigger', 'setupOnEditTrigger')
+      .addItem('Remove Edit Trigger', 'removeOnEditTrigger'))
+    .addSeparator()
     .addItem('Clear All Data', 'clearAllData')
     .addSeparator()
     .addSubMenu(ui.createMenu('Tests')
       .addItem('Run All Tests', 'runAllTests')
       .addItem('Run Quick Tests', 'runQuickTests')
-      .addItem('Cleanup Test Sheets', 'cleanupTestSheets'))
+      .addItem('Run MVP2 Tests', 'runMvp2Tests')
+      .addSeparator()
+      .addItem('Cleanup Test Sheets', 'cleanupTestSheets')
+      .addItem('Cleanup Calendar Events', 'cleanupTestData'))
     .addSeparator()
     .addItem('About', 'showAbout')
     .addToUi();
@@ -38,11 +46,16 @@ function showAbout() {
   const ui = SpreadsheetApp.getUi();
   ui.alert(
     'Appointment Booking System',
-    'Version: MVP 1.0\n\n' +
+    'Version: MVP 2.0 - Calendar Integration\n\n' +
     'This system manages appointments for multiple service providers.\n\n' +
+    'Features:\n' +
+    '• Automatic calendar event creation\n' +
+    '• Availability checking\n' +
+    '• Double-booking prevention\n' +
+    '• Activity logging\n\n' +
     'To set up:\n' +
     '1. Click "Appointment System → Initialize System"\n' +
-    '2. Wait for completion\n' +
+    '2. Click "Appointment System → Calendar → Setup Edit Trigger"\n' +
     '3. All sheets will be created automatically\n\n' +
     'For help: https://github.com/jjgao/openslots',
     ui.ButtonSet.OK
@@ -131,7 +144,7 @@ function createProvidersSheet() {
   const sheet = ss.insertSheet(sheetName);
 
   // Add headers
-  const headers = ['provider_id', 'name', 'email', 'phone', 'services_offered', 'active_status'];
+  const headers = ['provider_id', 'name', 'email', 'phone', 'services_offered', 'active_status', 'calendar_id'];
   sheet.appendRow(headers);
 
   // Format header row
@@ -152,6 +165,7 @@ function createProvidersSheet() {
   sheet.setColumnWidth(4, 120);  // phone
   sheet.setColumnWidth(5, 180);  // services_offered
   sheet.setColumnWidth(6, 120);  // active_status
+  sheet.setColumnWidth(7, 250);  // calendar_id (auto-populated)
 
   Logger.log('Providers sheet created');
 }
@@ -190,7 +204,7 @@ function createClientsSheet() {
   deleteSheetIfExists(sheetName);
   const sheet = ss.insertSheet(sheetName);
 
-  const headers = ['client_id', 'name', 'phone', 'email', 'is_member', 'notes', 'first_visit_date', 'last_visit_date'];
+  const headers = ['client_id', 'name', 'phone', 'email', 'notes', 'first_visit_date', 'last_visit_date'];
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
@@ -199,18 +213,16 @@ function createClientsSheet() {
   // Add data validation
   addPhoneValidation(sheet, 'C2:C1000', false);  // phone (required)
   addEmailValidation(sheet, 'D2:D1000', true);   // email (optional)
-  addDropdownValidation(sheet, 'E2:E1000', ['Yes', 'No'], 'Is this client a member?');  // is_member
-  addDateValidation(sheet, 'G2:G1000', true);    // first_visit_date
-  addDateValidation(sheet, 'H2:H1000', true);    // last_visit_date
+  addDateValidation(sheet, 'F2:F1000', true);    // first_visit_date
+  addDateValidation(sheet, 'G2:G1000', true);    // last_visit_date
 
   sheet.setColumnWidth(1, 100);  // client_id
   sheet.setColumnWidth(2, 150);  // name
   sheet.setColumnWidth(3, 120);  // phone
   sheet.setColumnWidth(4, 200);  // email
-  sheet.setColumnWidth(5, 100);  // is_member
-  sheet.setColumnWidth(6, 250);  // notes
-  sheet.setColumnWidth(7, 130);  // first_visit_date
-  sheet.setColumnWidth(8, 130);  // last_visit_date
+  sheet.setColumnWidth(5, 250);  // notes
+  sheet.setColumnWidth(6, 130);  // first_visit_date
+  sheet.setColumnWidth(7, 130);  // last_visit_date
 
   Logger.log('Clients sheet created');
 }
