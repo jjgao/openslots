@@ -66,30 +66,28 @@ function getAvailableTimeSlots(providerId, dateStr, duration) {
   try {
     var date = parseDateInTimezone(dateStr);
 
-    // Check if provider is available on this date
-    var availability = checkProviderAvailability(providerId, date);
+    // Get available time windows for this provider on this date
+    // This already subtracts holidays, exceptions, and existing appointments
+    var timeBlocks = getProviderAvailability(providerId, date);
 
-    if (!availability.available) {
-      return {
-        success: false,
-        error: availability.reason || 'Provider not available on this date'
-      };
-    }
-
-    // Get available time blocks
-    var timeBlocks = availability.timeBlocks || [];
     if (timeBlocks.length === 0) {
       return {
         success: false,
-        error: 'No available time blocks for this provider on this date'
+        error: 'Provider not available on this date (may be holiday, day off, or fully booked)'
       };
     }
 
-    // Get existing appointments
-    var existingAppointments = getProviderAppointments(providerId, date);
+    // Generate available slots from time blocks
+    // Note: getProviderAvailability already subtracts existing appointments,
+    // so we pass empty array for existingAppointments
+    var slots = generateTimeSlots(timeBlocks, [], duration);
 
-    // Generate available slots
-    var slots = generateTimeSlots(timeBlocks, existingAppointments, duration);
+    if (slots.length === 0) {
+      return {
+        success: false,
+        error: 'No available time slots for this duration on this date'
+      };
+    }
 
     return {
       success: true,
