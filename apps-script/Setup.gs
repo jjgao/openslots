@@ -24,6 +24,8 @@ function onOpen() {
     .addSeparator()
     .addSubMenu(ui.createMenu('Calendar')
       .addItem('Sync Missing Calendar Events', 'syncAllMissingCalendarEvents')
+      .addItem('Update Calendar Colors', 'updateAllProviderCalendarColors')
+      .addSeparator()
       .addItem('Setup Edit Trigger', 'setupOnEditTrigger')
       .addItem('Remove Edit Trigger', 'removeOnEditTrigger'))
     .addSeparator()

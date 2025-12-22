@@ -5,10 +5,11 @@ A free, easy-to-use appointment booking system built with Google Sheets. Perfect
 ## ✨ What You Get
 
 - 📅 **Multi-provider scheduling** - Manage appointments for 5-10 providers
-- 📝 **Client database** - Track client history and preferences
+- 🎨 **Google Calendar Integration** - Color-coded provider calendars
+- 📝 **Easy booking interface** - Search clients and book in seconds
 - ⏰ **Conflict prevention** - Automatic double-booking detection
-- 📊 **Built-in reports** - Track utilization, cancellations, no-shows
-- 🔔 **Daily notifications** - Providers get their schedule via email
+- 🔍 **Client search** - Find clients by name or phone instantly
+- 🕒 **Smart time slots** - Only shows available times
 - 💯 **100% Free** - Uses only free Google Workspace tools
 
 ## 🚀 Quick Start (30 seconds!)
@@ -53,7 +54,14 @@ A free, easy-to-use appointment booking system built with Google Sheets. Perfect
 
 ### For Receptionists
 
-#### Booking an Appointment
+#### Booking an Appointment (Easy Way - MVP3)
+1. Click **Appointment System → Book Appointment** in the menu
+2. Search for a client by name or phone (or create a new one)
+3. Select provider, service, duration, date, and time slot
+4. Click **Book Appointment**
+5. The appointment is automatically created and synced to the provider's calendar!
+
+#### Booking an Appointment (Manual Way)
 1. Go to the **Clients** sheet
 2. Find the client or add a new row with their information
 3. Go to the **Appointments** sheet
@@ -132,40 +140,38 @@ All reports are coming in future updates (MVP 7):
 
 For now, you can use Google Sheets' built-in filtering and sorting to view your data.
 
-## 🎯 What's Included (MVP 1)
+## 🎯 What's Included
 
-✅ **11 Pre-configured Sheets**
-- Providers - Service provider information
-- Services - Service types and durations
-- Clients - Client database with history
-- Appointments - All bookings
-- Provider_Availability - Weekly schedules
-- Provider_Exceptions - Time off and vacations
-- Activity_Log - Complete audit trail
-- Confirmation_Tracking - Track confirmation calls
-- System_Config - System settings
-- **Business_Holidays** - Business closure dates (holidays)
-- **Business_Exceptions** - Partial day closures (meetings, maintenance)
+### MVP 1 - Foundation ✅
+- **11 Pre-configured Sheets** with auto-generated IDs
+- **Smart Validation** for emails, phones, dates, and times
+- **Sample Data** (5 providers, 7 services, 10 clients, 15 appointments)
+- **Automated Testing** (10+ unit tests)
+- **Business Hours Configuration**
+- **Business Holidays** (recurring and one-time closures)
+- **Business Exceptions** (partial day closures for meetings, etc.)
 
-✅ **Smart Features**
-- Auto-generated IDs (PROV001, CLI001, APT001, etc.)
-- Dropdown menus for easy data entry
-- Email and phone validation
-- Date and time validation
-- Prevent invalid entries
+### MVP 2 - Google Calendar Integration ✅
+- **Automatic Calendar Sync** - Appointments sync to provider calendars
+- **Provider-Based Colors** - Each provider has a unique color
+- **Conflict Detection** - Prevents double-booking
+- **Real-time Updates** - Changes sync immediately
+- **Calendar Management** - Menu commands for sync and cleanup
 
-✅ **Sample Data**
-- 5 sample providers
-- 7 sample services
-- 10 sample clients
-- 15 sample appointments
-- Ready-to-use schedules
+### MVP 3 - Booking Interface ✅
+- **Easy Booking Form** - Sidebar UI for quick appointment booking
+- **Client Search** - Find clients by name or phone
+- **Create New Clients** - Add clients directly from booking form
+- **Available Time Slots** - See only available times for selected provider/date
+- **Duration Selection** - Choose from service duration options
+- **Smart Filtering** - Prevents booking in the past or during holidays
+- **30-minute Slot Increments** - Configurable in System_Config
 
-✅ **Automated Testing**
-- 10 comprehensive unit tests
-- Verify setup, validation, and data integrity
-- Run tests anytime via custom menu
-- Quick tests for fast verification
+### Testing
+- **MVP1 Tests** (10 tests) - Foundation, validation, data
+- **MVP2 Tests** (12 tests) - Config, availability, appointments
+- **MVP3 Tests** (7 tests) - Client management, booking UI
+- Run via **Appointment System → Tests** menu
 
 ## 🔧 Customization
 
@@ -273,22 +279,25 @@ If tests fail, check the error message for guidance. Common issues:
 
 ## 🚦 What's Next?
 
-This is **MVP 1** - the foundation of your booking system. Coming soon:
+**MVP 1, 2, and 3 are complete!** ✅
 
-**MVP 2** (2-3 days) - Google Calendar Integration
-- Automatic calendar sync
-- Visual schedule view
-- Booking conflict detection
+Your booking system now has:
+- ✅ Foundation with 11 pre-configured sheets
+- ✅ Google Calendar integration with provider colors
+- ✅ Easy booking interface with client search
 
-**MVP 3** (3-4 days) - Booking Interface
-- Easy booking form
-- Client search
-- Available time slots
+**Coming Next:**
 
-**MVP 4** (2-3 days) - Full Management
-- Cancel and reschedule
+**MVP 4** - Advanced Management
+- Cancel and reschedule appointments
 - Check-in tracking
 - No-show logging
+- Status updates via sidebar
+
+**MVP 5** - Client Self-Booking
+- Public booking page
+- Client portal
+- Email confirmations
 
 See [MVP_PLAN.md](MVP_PLAN.md) for the complete roadmap.
 

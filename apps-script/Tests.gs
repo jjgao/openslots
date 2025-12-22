@@ -1261,15 +1261,36 @@ function testGetBookingFormData() {
 function runMvp3Tests() {
   const ui = SpreadsheetApp.getUi();
 
-  const tests = [
-    testSearchClients,
-    testCreateClient,
-    testUpdateClientVisitHistory,
-    testGetClientAppointmentHistory,
-    testGetClientStats,
-    testGetAvailableTimeSlots,
-    testGetBookingFormData
-  ];
+  ui.alert(
+    'Running MVP3 Tests',
+    'This will run tests for:\n' +
+    '• Client management\n' +
+    '• Client search\n' +
+    '• Booking UI functions\n\n' +
+    'This may take 15-30 seconds.',
+    ui.ButtonSet.OK
+  );
 
-  runTests('MVP3 Test Suite', tests, ui);
+  Logger.log('========================================');
+  Logger.log('Starting MVP3 Test Suite');
+  Logger.log('========================================');
+
+  const results = [];
+
+  // Client management tests
+  results.push(testSearchClients());
+  results.push(testCreateClient());
+  results.push(testUpdateClientVisitHistory());
+  results.push(testGetClientAppointmentHistory());
+  results.push(testGetClientStats());
+
+  // Booking UI tests
+  results.push(testGetAvailableTimeSlots());
+  results.push(testGetBookingFormData());
+
+  displayTestResults(results);
+
+  Logger.log('========================================');
+  Logger.log('MVP3 Test Suite Complete');
+  Logger.log('========================================');
 }
