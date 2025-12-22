@@ -24,7 +24,7 @@ const CALENDAR_COLORS = {
 };
 
 /**
- * Status to color mapping
+ * Status to color mapping (legacy, now using provider colors)
  * @const {Object}
  */
 const STATUS_COLORS = {
@@ -36,6 +36,54 @@ const STATUS_COLORS = {
   'No-show': CALENDAR_COLORS.TANGERINE,
   'Rescheduled': CALENDAR_COLORS.GRAPE
 };
+
+/**
+ * Available colors for provider assignment (cycling through these)
+ * @const {Array}
+ */
+const PROVIDER_COLOR_PALETTE = [
+  CALENDAR_COLORS.BLUEBERRY,  // Blue
+  CALENDAR_COLORS.BASIL,      // Green
+  CALENDAR_COLORS.FLAMINGO,   // Pink
+  CALENDAR_COLORS.TANGERINE,  // Orange
+  CALENDAR_COLORS.GRAPE,      // Purple
+  CALENDAR_COLORS.PEACOCK,    // Teal
+  CALENDAR_COLORS.TOMATO,     // Red
+  CALENDAR_COLORS.BANANA,     // Yellow
+  CALENDAR_COLORS.LAVENDER,   // Lavender
+  CALENDAR_COLORS.SAGE        // Sage
+];
+
+/**
+ * Gets a color for a provider based on their position in the provider list
+ * @param {string} providerId - The provider ID
+ * @returns {string} Calendar color ID
+ */
+function getProviderColor(providerId) {
+  try {
+    // Get all providers to determine index
+    var providers = getProviders();
+    var providerIndex = -1;
+
+    for (var i = 0; i < providers.length; i++) {
+      if (providers[i].provider_id === providerId) {
+        providerIndex = i;
+        break;
+      }
+    }
+
+    if (providerIndex === -1) {
+      return CALENDAR_COLORS.BLUEBERRY; // Default color
+    }
+
+    // Cycle through color palette
+    return PROVIDER_COLOR_PALETTE[providerIndex % PROVIDER_COLOR_PALETTE.length];
+
+  } catch (error) {
+    Logger.log('Error getting provider color: ' + error.toString());
+    return CALENDAR_COLORS.BLUEBERRY;
+  }
+}
 
 /**
  * Creates a calendar event for an appointment
@@ -77,8 +125,8 @@ function createCalendarEvent(appointmentId) {
       location: getConfig('business_name', 'Office')
     });
 
-    // Set event color based on status
-    const colorId = STATUS_COLORS[appointment.status] || CALENDAR_COLORS.BLUEBERRY;
+    // Set event color based on provider (each provider gets a unique color)
+    const colorId = getProviderColor(appointment.provider_id);
     event.setColor(colorId);
 
     // Store event ID in appointment
@@ -154,8 +202,8 @@ function updateCalendarEvent(appointmentId) {
     event.setDescription(eventDescription);
     event.setTime(startTime, endTime);
 
-    // Update color based on status
-    const colorId = STATUS_COLORS[appointment.status] || CALENDAR_COLORS.BLUEBERRY;
+    // Update color based on provider (each provider gets a unique color)
+    const colorId = getProviderColor(appointment.provider_id);
     event.setColor(colorId);
 
     // Log the update
