@@ -562,7 +562,21 @@ function getGeneratedId(sheetName, rowNum) {
     }
 
     SpreadsheetApp.flush(); // Ensure formula has calculated
-    return sheet.getRange(rowNum, 1).getValue();
+
+    // Retry up to 3 times with small delays to let formula calculate
+    var maxRetries = 3;
+    for (var i = 0; i < maxRetries; i++) {
+      var id = sheet.getRange(rowNum, 1).getValue();
+      if (id) {
+        return id;
+      }
+      // Wait a bit and try again
+      Utilities.sleep(200);
+      SpreadsheetApp.flush();
+    }
+
+    Logger.log('Warning: ID not generated after retries for row ' + rowNum);
+    return sheet.getRange(rowNum, 1).getValue(); // Last attempt
 
   } catch (error) {
     Logger.log(`Error getting generated ID: ${error.toString()}`);

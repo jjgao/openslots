@@ -435,14 +435,18 @@
 
       google.script.run
         .withSuccessHandler(function(result) {
+          console.log('Time slots result:', result);
           if (result.success) {
+            console.log('Slots:', result.slots);
             displayTimeSlots(result.slots);
           } else {
+            console.error('Error getting slots:', result.error);
             document.getElementById('timeSlots').innerHTML = '<div class="error">' + result.error + '</div>';
           }
           checkCanBook();
         })
         .withFailureHandler(function(error) {
+          console.error('Failed to get time slots:', error);
           document.getElementById('timeSlots').innerHTML = '<div class="error">Error: ' + error.message + '</div>';
           checkCanBook();
         })
