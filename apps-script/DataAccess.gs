@@ -209,14 +209,19 @@ function addRow(sheetName, rowData) {
       return -1;
     }
 
+    // Get the next row number
     const newRow = sheet.getLastRow() + 1;
 
-    // Start from column B (column 2) since column A has auto-increment formula
-    sheet.getRange(newRow, 2, 1, rowData.length).setValues([rowData]);
+    // Generate the ID directly in code (no formulas!)
+    const prefix = getIdPrefix(sheetName);
+    const idNumber = newRow - 1; // Subtract 1 for header row
+    const newId = prefix + padNumber(idNumber, 3);
 
-    SpreadsheetApp.flush(); // Ensure formulas recalculate
+    // Write the ID and data in one operation
+    const fullRowData = [newId].concat(rowData);
+    sheet.getRange(newRow, 1, 1, fullRowData.length).setValues([fullRowData]);
 
-    Logger.log(`Added row ${newRow} to ${sheetName}`);
+    Logger.log(`Added row ${newRow} to ${sheetName} with ID ${newId}`);
     return newRow;
 
   } catch (error) {
@@ -561,11 +566,45 @@ function getGeneratedId(sheetName, rowNum) {
       return null;
     }
 
-    SpreadsheetApp.flush(); // Ensure formula has calculated
-    return sheet.getRange(rowNum, 1).getValue();
+    // Simply read the ID value (no formulas, no waiting!)
+    var id = sheet.getRange(rowNum, 1).getValue();
+    return id || null;
 
   } catch (error) {
     Logger.log(`Error getting generated ID: ${error.toString()}`);
     return null;
   }
+}
+
+/**
+ * Gets ID prefix for a sheet
+ * @param {string} sheetName - Name of the sheet
+ * @returns {string} ID prefix
+ */
+function getIdPrefix(sheetName) {
+  var prefixMap = {
+    'Providers': 'PROV',
+    'Services': 'SERV',
+    'Clients': 'CLI',
+    'Appointments': 'APT',
+    'Provider_Availability': 'AVAIL',
+    'Provider_Exceptions': 'EXC',
+    'Activity_Log': 'LOG',
+    'Confirmation_Tracking': 'CONF',
+    'Business_Holidays': 'HOL',
+    'Business_Exceptions': 'BEXC'
+  };
+  return prefixMap[sheetName] || 'ID';
+}
+
+/**
+ * Pads a number with leading zeros
+ * @param {number} num - Number to pad
+ * @param {number} size - Total size
+ * @returns {string} Padded string
+ */
+function padNumber(num, size) {
+  var s = num + '';
+  while (s.length < size) s = '0' + s;
+  return s;
 }

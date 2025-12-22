@@ -6,25 +6,26 @@
  */
 
 /**
- * Calendar color IDs (Google Calendar uses string IDs 1-11)
+ * Calendar color hex codes for CalendarApp.setColor()
+ * These are the actual hex values Google Calendar uses
  * @const {Object}
  */
 const CALENDAR_COLORS = {
-  LAVENDER: '1',
-  SAGE: '2',
-  GRAPE: '3',
-  FLAMINGO: '4',
-  BANANA: '5',
-  TANGERINE: '6',
-  PEACOCK: '7',
-  GRAPHITE: '8',
-  BLUEBERRY: '9',
-  BASIL: '10',
-  TOMATO: '11'
+  LAVENDER: '#9fc6e7',    // Light blue
+  SAGE: '#42d692',        // Light green
+  GRAPE: '#9e69af',       // Purple
+  FLAMINGO: '#ff887c',    // Coral/pink
+  BANANA: '#fbd75b',      // Yellow
+  TANGERINE: '#ffb878',   // Orange
+  PEACOCK: '#16a765',     // Teal/green
+  GRAPHITE: '#92e1c0',    // Mint
+  BLUEBERRY: '#9fc6e7',   // Blue
+  BASIL: '#42d692',       // Green
+  TOMATO: '#ff6961'       // Red
 };
 
 /**
- * Status to color mapping
+ * Status to color mapping (legacy, now using provider colors)
  * @const {Object}
  */
 const STATUS_COLORS = {
@@ -36,6 +37,144 @@ const STATUS_COLORS = {
   'No-show': CALENDAR_COLORS.TANGERINE,
   'Rescheduled': CALENDAR_COLORS.GRAPE
 };
+
+/**
+ * Available colors for provider assignment (cycling through these)
+ * @const {Array}
+ */
+const PROVIDER_COLOR_PALETTE = [
+  CALENDAR_COLORS.BLUEBERRY,  // Blue
+  CALENDAR_COLORS.BASIL,      // Green
+  CALENDAR_COLORS.FLAMINGO,   // Pink
+  CALENDAR_COLORS.TANGERINE,  // Orange
+  CALENDAR_COLORS.GRAPE,      // Purple
+  CALENDAR_COLORS.PEACOCK,    // Teal
+  CALENDAR_COLORS.TOMATO,     // Red
+  CALENDAR_COLORS.BANANA,     // Yellow
+  CALENDAR_COLORS.LAVENDER,   // Lavender
+  CALENDAR_COLORS.SAGE        // Sage
+];
+
+/**
+ * Gets a color for a provider based on their position in the provider list
+ * @param {string} providerId - The provider ID
+ * @returns {string} Calendar color hex code
+ */
+function getProviderColor(providerId) {
+  try {
+    // Get all providers to determine index
+    var providers = getProviders();
+    var providerIndex = -1;
+
+    for (var i = 0; i < providers.length; i++) {
+      if (providers[i].provider_id === providerId) {
+        providerIndex = i;
+        break;
+      }
+    }
+
+    if (providerIndex === -1) {
+      return CALENDAR_COLORS.BLUEBERRY; // Default color
+    }
+
+    // Cycle through color palette
+    return PROVIDER_COLOR_PALETTE[providerIndex % PROVIDER_COLOR_PALETTE.length];
+
+  } catch (error) {
+    Logger.log('Error getting provider color: ' + error.toString());
+    return CALENDAR_COLORS.BLUEBERRY;
+  }
+}
+
+/**
+ * Sets the color of a calendar using the Calendar API
+ * @param {string} calendarId - The calendar ID
+ * @param {string} providerId - The provider ID
+ */
+function setCalendarColor(calendarId, providerId) {
+  try {
+    var colorHex = getProviderColor(providerId);
+
+    Logger.log(`Attempting to set calendar color for provider ${providerId} to ${colorHex}`);
+
+    // Use Calendar API to update calendar color
+    var calendarListEntry = Calendar.CalendarList.get(calendarId);
+
+    Logger.log(`Current backgroundColor: ${calendarListEntry.backgroundColor}`);
+
+    // Update the color properties
+    calendarListEntry.backgroundColor = colorHex;
+    calendarListEntry.foregroundColor = '#000000'; // Black text
+
+    // Update the calendar in the Calendar API
+    var updatedEntry = Calendar.CalendarList.update(calendarListEntry, calendarId, {
+      colorRgbFormat: true
+    });
+
+    Logger.log(`Successfully set calendar ${calendarId} (provider ${providerId}) color to ${colorHex}`);
+    Logger.log(`Confirmed new backgroundColor: ${updatedEntry.backgroundColor}`);
+  } catch (e) {
+    Logger.log(`ERROR setting calendar color for ${providerId}: ${e.toString()}`);
+    Logger.log(`Stack: ${e.stack}`);
+  }
+}
+
+/**
+ * Manually update all provider calendar colors
+ * Run this from the menu if colors aren't updating correctly
+ */
+function updateAllProviderCalendarColors() {
+  try {
+    Logger.log('=== Starting Calendar Color Update ===');
+
+    var providers = getProviders();
+    var updated = 0;
+    var failed = 0;
+    var details = [];
+
+    Logger.log(`Found ${providers.length} providers`);
+
+    for (var i = 0; i < providers.length; i++) {
+      var provider = providers[i];
+      var color = getProviderColor(provider.provider_id);
+
+      Logger.log(`\nProvider ${i}: ${provider.name} (${provider.provider_id})`);
+      Logger.log(`  Assigned color: ${color}`);
+      Logger.log(`  Calendar ID: ${provider.calendar_id || 'NONE'}`);
+
+      if (provider.calendar_id) {
+        try {
+          setCalendarColor(provider.calendar_id, provider.provider_id);
+          updated++;
+          details.push(`${provider.name}: ${color}`);
+        } catch (e) {
+          Logger.log(`  FAILED: ${e.toString()}`);
+          failed++;
+          details.push(`${provider.name}: FAILED`);
+        }
+      } else {
+        Logger.log(`  SKIPPED: No calendar ID`);
+      }
+    }
+
+    var ui = SpreadsheetApp.getUi();
+    var message = `Successfully updated: ${updated}\nFailed: ${failed}\n\nColors:\n${details.join('\n')}`;
+
+    ui.alert(
+      'Calendar Colors Updated',
+      message,
+      ui.ButtonSet.OK
+    );
+
+    Logger.log(`\n=== Update Complete: ${updated} updated, ${failed} failed ===`);
+  } catch (error) {
+    Logger.log(`ERROR in updateAllProviderCalendarColors: ${error.toString()}`);
+    Logger.log(`Stack: ${error.stack}`);
+
+    var ui = SpreadsheetApp.getUi();
+    ui.alert('Error', `Failed to update calendar colors:\n${error.toString()}`, ui.ButtonSet.OK);
+  }
+}
 
 /**
  * Creates a calendar event for an appointment
@@ -77,9 +216,7 @@ function createCalendarEvent(appointmentId) {
       location: getConfig('business_name', 'Office')
     });
 
-    // Set event color based on status
-    const colorId = STATUS_COLORS[appointment.status] || CALENDAR_COLORS.BLUEBERRY;
-    event.setColor(colorId);
+    // Event color is inherited from calendar color (no need to set individually)
 
     // Store event ID in appointment
     const eventId = event.getId();
@@ -154,9 +291,7 @@ function updateCalendarEvent(appointmentId) {
     event.setDescription(eventDescription);
     event.setTime(startTime, endTime);
 
-    // Update color based on status
-    const colorId = STATUS_COLORS[appointment.status] || CALENDAR_COLORS.BLUEBERRY;
-    event.setColor(colorId);
+    // Event color is inherited from calendar color (no need to set individually)
 
     // Log the update
     logCalendarUpdate(appointmentId, appointment.calendar_event_id);
@@ -239,6 +374,8 @@ function getOrCreateProviderCalendar(provider) {
     if (provider.calendar_id) {
       const existingCalendar = CalendarApp.getCalendarById(provider.calendar_id);
       if (existingCalendar) {
+        // Set calendar color using Calendar API
+        setCalendarColor(provider.calendar_id, provider.provider_id);
         return existingCalendar;
       }
       // Calendar was deleted externally, clear the stored ID and create new one
@@ -252,8 +389,10 @@ function getOrCreateProviderCalendar(provider) {
     const allCalendars = CalendarApp.getAllCalendars();
     for (let i = 0; i < allCalendars.length; i++) {
       if (allCalendars[i].getName() === calendarName) {
-        // Found existing calendar, store the ID and return it
+        // Found existing calendar, store the ID and set color
         const calId = allCalendars[i].getId();
+        setCalendarColor(calId, provider.provider_id);
+
         updateRecordById(SHEETS.PROVIDERS, provider.provider_id, {
           calendar_id: calId
         });
@@ -274,7 +413,10 @@ function getOrCreateProviderCalendar(provider) {
       calendar_id: newCalId
     });
 
+    // Set calendar color to match provider color (after calendar is created)
+    setCalendarColor(newCalId, provider.provider_id);
     Logger.log(`Created new calendar for ${provider.name}: ${newCalId}`);
+
     return newCalendar;
 
   } catch (error) {
@@ -442,44 +584,16 @@ function buildEventDescription(appointment, client, service) {
 }
 
 /**
- * Syncs calendar event color with appointment status
- * @param {string} appointmentId - The appointment ID
- * @param {string} newStatus - The new status
+ * Legacy function - no longer needed since event colors inherit from calendar color
+ * Calendar color is set per provider, not per event status
+ * @param {string} appointmentId - The appointment ID (unused)
+ * @param {string} newStatus - The new status (unused)
  * @returns {Object} Result object
  */
 function syncCalendarEventColor(appointmentId, newStatus) {
-  try {
-    const appointment = getAppointment(appointmentId);
-    if (!appointment || !appointment.calendar_event_id) {
-      return { success: false, error: 'No calendar event to update' };
-    }
-
-    const provider = getProvider(appointment.provider_id);
-    if (!provider) {
-      return { success: false, error: 'Provider not found' };
-    }
-
-    const calendar = getOrCreateProviderCalendar(provider);
-    if (!calendar) {
-      return { success: false, error: 'Calendar not found' };
-    }
-
-    const event = calendar.getEventById(appointment.calendar_event_id);
-    if (!event) {
-      return { success: false, error: 'Calendar event not found' };
-    }
-
-    const colorId = STATUS_COLORS[newStatus] || CALENDAR_COLORS.BLUEBERRY;
-    event.setColor(colorId);
-
-    Logger.log(`Calendar event color updated for ${appointmentId}: ${newStatus}`);
-
-    return { success: true };
-
-  } catch (error) {
-    Logger.log(`Error syncing calendar color: ${error.toString()}`);
-    return { success: false, error: error.toString() };
-  }
+  // Event colors now inherit from calendar color (provider-based)
+  // No need to update individual event colors
+  return { success: true };
 }
 
 /**

@@ -116,13 +116,8 @@ function bookAppointment(appointmentData) {
       appointmentData.notes
     );
 
-    // Step 9: Update client's last visit date if this is a future appointment
-    // (Actually, update first_visit_date if not set)
-    if (!client.first_visit_date) {
-      updateRecordById(SHEETS.CLIENTS, appointmentData.clientId, {
-        first_visit_date: appointmentData.date
-      });
-    }
+    // Step 9: Update client visit history (first_visit and last_visit)
+    updateClientVisitHistory(appointmentData.clientId, appointmentData.date);
 
     Logger.log(`Appointment booked successfully: ${appointmentId}`);
 

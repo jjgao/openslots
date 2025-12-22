@@ -69,7 +69,6 @@ function addSampleData() {
  * Adds sample providers
  */
 function addSampleProviders() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Providers');
   const sampleData = [
     ['Dr. Sarah Johnson', 'sarah.johnson@example.com', '555-0101', 'SERV001,SERV002', 'Active'],
     ['Dr. Michael Chen', 'michael.chen@example.com', '555-0102', 'SERV001,SERV003,SERV004', 'Active'],
@@ -78,11 +77,10 @@ function addSampleProviders() {
     ['Lisa Martinez', 'lisa.martinez@example.com', '555-0105', 'SERV001,SERV007', 'Inactive']
   ];
 
-  // Start from row 2 (row 1 is header)
+  // Use addRow() to generate IDs automatically
   for (let i = 0; i < sampleData.length; i++) {
-    sheet.getRange(i + 2, 2, 1, sampleData[i].length).setValues([sampleData[i]]);
+    addRow('Providers', sampleData[i]);
   }
-  // IDs will auto-generate via formula in column A
 
   Logger.log('Sample providers added: ' + sampleData.length);
 }
@@ -93,17 +91,17 @@ function addSampleProviders() {
 function addSampleServices() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Services');
   const sampleData = [
-    ['Initial Consultation', '30,60', 'First-time client consultation'],
+    ['Initial Consultation', '30|60', 'First-time client consultation'],
     ['Follow-up Appointment', '30', 'Follow-up visit for existing clients'],
     ['Standard Treatment', '60', 'Regular treatment session'],
-    ['Extended Treatment', '90,120', 'Extended treatment session for complex cases'],
-    ['Group Session', '60,90', 'Group session (multiple clients)'],
-    ['Emergency Visit', '30,60', 'Urgent/emergency appointment'],
+    ['Extended Treatment', '90|120', 'Extended treatment session for complex cases'],
+    ['Group Session', '60|90', 'Group session (multiple clients)'],
+    ['Emergency Visit', '30|60', 'Urgent/emergency appointment'],
     ['Annual Review', '60', 'Annual checkup and assessment']
   ];
 
   for (let i = 0; i < sampleData.length; i++) {
-    sheet.getRange(i + 2, 2, 1, sampleData[i].length).setValues([sampleData[i]]);
+    addRow('Services', sampleData[i]);
   }
 
   Logger.log('Sample services added: ' + sampleData.length);
@@ -114,21 +112,22 @@ function addSampleServices() {
  */
 function addSampleClients() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Clients');
+  // Headers: client_id, name, phone, email, notes, first_visit_date, last_visit_date
   const sampleData = [
-    ['John Doe', '555-1001', 'john.doe@email.com', 'Yes', 'Prefers morning appointments', '', ''],
-    ['Jane Smith', '555-1002', 'jane.smith@email.com', 'Yes', 'Allergic to latex', '', ''],
-    ['Bob Wilson', '555-1003', '', 'No', 'No email provided', '', ''],
-    ['Alice Cooper', '555-1004', 'alice.cooper@email.com', 'Yes', 'VIP client', '', ''],
-    ['Charlie Brown', '555-1005', 'charlie.b@email.com', 'No', 'Reminder calls preferred', '', ''],
-    ['Diana Prince', '555-1006', 'diana.prince@email.com', 'Yes', '', '', ''],
-    ['Frank Castle', '555-1007', '', 'No', 'Prefers afternoon slots', '', ''],
-    ['Grace Kelly', '555-1008', 'grace.kelly@email.com', 'Yes', 'Referral from Dr. Chen', '', ''],
-    ['Henry Ford', '555-1009', 'henry.ford@email.com', 'No', '', '', ''],
-    ['Iris West', '555-1010', 'iris.west@email.com', 'Yes', 'Frequent no-shows in past', '', '']
+    ['John Doe', '555-1001', 'john.doe@email.com', 'Prefers morning appointments', '', ''],
+    ['Jane Smith', '555-1002', 'jane.smith@email.com', 'Allergic to latex', '', ''],
+    ['Bob Wilson', '555-1003', '', 'No email provided', '', ''],
+    ['Alice Cooper', '555-1004', 'alice.cooper@email.com', 'VIP client', '', ''],
+    ['Charlie Brown', '555-1005', 'charlie.b@email.com', 'Reminder calls preferred', '', ''],
+    ['Diana Prince', '555-1006', 'diana.prince@email.com', '', '', ''],
+    ['Frank Castle', '555-1007', '', 'Prefers afternoon slots', '', ''],
+    ['Grace Kelly', '555-1008', 'grace.kelly@email.com', 'Referral from Dr. Chen', '', ''],
+    ['Henry Ford', '555-1009', 'henry.ford@email.com', '', '', ''],
+    ['Iris West', '555-1010', 'iris.west@email.com', 'Frequent no-shows in past', '', '']
   ];
 
   for (let i = 0; i < sampleData.length; i++) {
-    sheet.getRange(i + 2, 2, 1, sampleData[i].length).setValues([sampleData[i]]);
+    addRow(sheet.getName(), sampleData[i]);
   }
 
   Logger.log('Sample clients added: ' + sampleData.length);
@@ -179,7 +178,7 @@ function addSampleProviderAvailability() {
   const allSchedules = drJohnson.concat(drChen, emma, james);
 
   for (let i = 0; i < allSchedules.length; i++) {
-    sheet.getRange(i + 2, 2, 1, allSchedules[i].length).setValues([allSchedules[i]]);
+    addRow(sheet.getName(), allSchedules[i]);
   }
 
   Logger.log('Sample provider availability added: ' + allSchedules.length + ' entries');
@@ -208,7 +207,7 @@ function addSampleProviderExceptions() {
   ];
 
   for (let i = 0; i < sampleData.length; i++) {
-    sheet.getRange(i + 2, 2, 1, sampleData[i].length).setValues([sampleData[i]]);
+    addRow(sheet.getName(), sampleData[i]);
   }
 
   Logger.log('Sample provider exceptions added: ' + sampleData.length);
@@ -275,7 +274,7 @@ function addSampleAppointments() {
   ];
 
   for (let i = 0; i < sampleData.length; i++) {
-    sheet.getRange(i + 2, 2, 1, sampleData[i].length).setValues([sampleData[i]]);
+    addRow(sheet.getName(), sampleData[i]);
   }
 
   Logger.log('Sample appointments added: ' + sampleData.length);
@@ -309,7 +308,7 @@ function addSampleActivityLog() {
   ];
 
   for (let i = 0; i < sampleData.length; i++) {
-    sheet.getRange(i + 2, 2, 1, sampleData[i].length).setValues([sampleData[i]]);
+    addRow(sheet.getName(), sampleData[i]);
   }
 
   Logger.log('Sample activity log entries added: ' + sampleData.length);
@@ -334,7 +333,7 @@ function addSampleConfirmationTracking() {
   ];
 
   for (let i = 0; i < sampleData.length; i++) {
-    sheet.getRange(i + 2, 2, 1, sampleData[i].length).setValues([sampleData[i]]);
+    addRow(sheet.getName(), sampleData[i]);
   }
 
   Logger.log('Sample confirmation tracking entries added: ' + sampleData.length);
@@ -415,7 +414,7 @@ function addSampleBusinessHolidays() {
   ];
 
   for (let i = 0; i < sampleData.length; i++) {
-    sheet.getRange(i + 2, 2, 1, sampleData[i].length).setValues([sampleData[i]]);
+    addRow(sheet.getName(), sampleData[i]);
   }
 
   Logger.log('Sample business holidays added: ' + sampleData.length);
@@ -440,7 +439,7 @@ function addSampleBusinessExceptions() {
   ];
 
   for (let i = 0; i < sampleData.length; i++) {
-    sheet.getRange(i + 2, 2, 1, sampleData[i].length).setValues([sampleData[i]]);
+    addRow(sheet.getName(), sampleData[i]);
   }
 
   Logger.log('Sample business exceptions added: ' + sampleData.length);
@@ -458,7 +457,7 @@ function addSampleSystemConfig() {
     ['business_hours_end', '17:00'],
     ['business_days', 'Monday,Tuesday,Wednesday,Thursday,Friday'],
     ['default_appointment_duration', '30'],
-    ['appointment_slot_increment', '15'],
+    ['appointment_slot_increment', '30'],
     ['timezone', 'America/New_York'],
     ['enable_email_notifications', 'Yes'],
     ['enable_sms_notifications', 'No'],

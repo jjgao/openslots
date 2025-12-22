@@ -1055,3 +1055,242 @@ function testFindRecords() {
     return { name: testName, passed: false, message: `Error: ${error.toString()}` };
   }
 }
+
+// ============================================================================
+// MVP 3 TESTS: Client Management + Booking UI
+// ============================================================================
+
+/**
+ * Test: searchClients function
+ */
+function testSearchClients() {
+  const testName = 'ClientManagement: searchClients()';
+
+  try {
+    // Test empty search
+    const emptyResult = searchClients('');
+
+    // Test search by name (partial match)
+    const nameResults = searchClients('john');
+
+    // Test search by phone (if sample data exists)
+    const phoneResults = searchClients('555');
+
+    const emptyIsArray = Array.isArray(emptyResult);
+    const nameIsArray = Array.isArray(nameResults);
+    const phoneIsArray = Array.isArray(phoneResults);
+
+    return {
+      name: testName,
+      passed: emptyIsArray && nameIsArray && phoneIsArray,
+      message: emptyIsArray && nameIsArray && phoneIsArray
+        ? `Empty: ${emptyResult.length}, Name: ${nameResults.length}, Phone: ${phoneResults.length}`
+        : 'Failed: one or more results not an array'
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: createClient function
+ */
+function testCreateClient() {
+  const testName = 'ClientManagement: createClient()';
+
+  try {
+    // Test with missing required fields
+    const result1 = createClient({});
+    const result2 = createClient({ name: 'Test' }); // Missing phone
+
+    // Both should fail
+    const failsCorrectly = !result1.success && !result2.success;
+
+    return {
+      name: testName,
+      passed: failsCorrectly,
+      message: failsCorrectly
+        ? 'createClient correctly validates required fields'
+        : `Failed: empty=${result1.success}, noPhone=${result2.success}`
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: updateClientVisitHistory function
+ */
+function testUpdateClientVisitHistory() {
+  const testName = 'ClientManagement: updateClientVisitHistory()';
+
+  try {
+    // Test with invalid inputs
+    const result1 = updateClientVisitHistory(null, '2025-01-01');
+    const result2 = updateClientVisitHistory('CLI999', null);
+    const result3 = updateClientVisitHistory('NONEXISTENT', '2025-01-01');
+
+    // All should return false or handle gracefully
+    const failsCorrectly = !result1 && !result2 && !result3;
+
+    return {
+      name: testName,
+      passed: failsCorrectly,
+      message: failsCorrectly
+        ? 'updateClientVisitHistory correctly handles invalid inputs'
+        : 'Failed: should handle invalid inputs gracefully'
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: getClientAppointmentHistory function
+ */
+function testGetClientAppointmentHistory() {
+  const testName = 'ClientManagement: getClientAppointmentHistory()';
+
+  try {
+    // Test with invalid client ID
+    const result1 = getClientAppointmentHistory(null);
+    const result2 = getClientAppointmentHistory('NONEXISTENT');
+
+    // Both should return empty arrays
+    const handlesInvalid = Array.isArray(result1) && result1.length === 0 &&
+                           Array.isArray(result2) && result2.length === 0;
+
+    // Test with valid client (if sample data exists)
+    const result3 = getClientAppointmentHistory('CLI001');
+    const isArray = Array.isArray(result3);
+
+    return {
+      name: testName,
+      passed: handlesInvalid && isArray,
+      message: handlesInvalid && isArray
+        ? `Returns arrays correctly. CLI001 has ${result3.length} appointment(s)`
+        : 'Failed: should return empty arrays for invalid inputs'
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: getClientStats function
+ */
+function testGetClientStats() {
+  const testName = 'ClientManagement: getClientStats()';
+
+  try {
+    // Test with valid client (if exists)
+    const stats = getClientStats('CLI001');
+
+    const hasRequiredFields = stats &&
+                              typeof stats.total_appointments === 'number' &&
+                              typeof stats.completed === 'number' &&
+                              typeof stats.cancelled === 'number' &&
+                              typeof stats.no_shows === 'number' &&
+                              typeof stats.upcoming === 'number';
+
+    return {
+      name: testName,
+      passed: hasRequiredFields,
+      message: hasRequiredFields
+        ? `Stats: ${stats.total_appointments} total, ${stats.completed} completed`
+        : 'Failed: missing required stat fields'
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: getAvailableTimeSlots function
+ */
+function testGetAvailableTimeSlots() {
+  const testName = 'BookingUI: getAvailableTimeSlots()';
+
+  try {
+    // Test with missing parameters
+    const result1 = getAvailableTimeSlots(null, null, null);
+    const result2 = getAvailableTimeSlots('PROV001', null, 30);
+
+    // Should return error for missing params
+    const failsCorrectly = !result1.success && !result2.success;
+
+    return {
+      name: testName,
+      passed: failsCorrectly,
+      message: failsCorrectly
+        ? 'getAvailableTimeSlots correctly validates parameters'
+        : 'Failed: should require all parameters'
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Test: getBookingFormData function
+ */
+function testGetBookingFormData() {
+  const testName = 'BookingUI: getBookingFormData()';
+
+  try {
+    const formData = getBookingFormData();
+
+    const hasProviders = formData && Array.isArray(formData.providers);
+    const hasServices = formData && Array.isArray(formData.services);
+
+    return {
+      name: testName,
+      passed: hasProviders && hasServices,
+      message: hasProviders && hasServices
+        ? `Providers: ${formData.providers.length}, Services: ${formData.services.length}`
+        : 'Failed: should return providers and services arrays'
+    };
+  } catch (error) {
+    return { name: testName, passed: false, message: `Error: ${error.toString()}` };
+  }
+}
+
+/**
+ * Runs all MVP3 tests
+ */
+function runMvp3Tests() {
+  const ui = SpreadsheetApp.getUi();
+
+  ui.alert(
+    'Running MVP3 Tests',
+    'This will run tests for:\n' +
+    '• Client management\n' +
+    '• Client search\n' +
+    '• Booking UI functions\n\n' +
+    'This may take 15-30 seconds.',
+    ui.ButtonSet.OK
+  );
+
+  Logger.log('========================================');
+  Logger.log('Starting MVP3 Test Suite');
+  Logger.log('========================================');
+
+  const results = [];
+
+  // Client management tests
+  results.push(testSearchClients());
+  results.push(testCreateClient());
+  results.push(testUpdateClientVisitHistory());
+  results.push(testGetClientAppointmentHistory());
+  results.push(testGetClientStats());
+
+  // Booking UI tests
+  results.push(testGetAvailableTimeSlots());
+  results.push(testGetBookingFormData());
+
+  displayTestResults(results);
+
+  Logger.log('========================================');
+  Logger.log('MVP3 Test Suite Complete');
+  Logger.log('========================================');
+}

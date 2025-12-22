@@ -20,8 +20,12 @@ function onOpen() {
     .addItem('Initialize System', 'initializeSystem')
     .addItem('Add Sample Data', 'addSampleData')
     .addSeparator()
+    .addItem('Book Appointment', 'showBookingSidebar')
+    .addSeparator()
     .addSubMenu(ui.createMenu('Calendar')
       .addItem('Sync Missing Calendar Events', 'syncAllMissingCalendarEvents')
+      .addItem('Update Calendar Colors', 'updateAllProviderCalendarColors')
+      .addSeparator()
       .addItem('Setup Edit Trigger', 'setupOnEditTrigger')
       .addItem('Remove Edit Trigger', 'removeOnEditTrigger'))
     .addSeparator()
@@ -31,6 +35,7 @@ function onOpen() {
       .addItem('Run All Tests', 'runAllTests')
       .addItem('Run Quick Tests', 'runQuickTests')
       .addItem('Run MVP2 Tests', 'runMvp2Tests')
+      .addItem('Run MVP3 Tests', 'runMvp3Tests')
       .addSeparator()
       .addItem('Cleanup Test Sheets', 'cleanupTestSheets')
       .addItem('Cleanup Calendar Events', 'cleanupTestData'))
@@ -46,17 +51,19 @@ function showAbout() {
   const ui = SpreadsheetApp.getUi();
   ui.alert(
     'Appointment Booking System',
-    'Version: MVP 2.0 - Calendar Integration\n\n' +
+    'Version: MVP 3.0 - Booking UI & Client Management\n\n' +
     'This system manages appointments for multiple service providers.\n\n' +
     'Features:\n' +
+    '• Easy booking UI with client search\n' +
     '• Automatic calendar event creation\n' +
     '• Availability checking\n' +
     '• Double-booking prevention\n' +
+    '• Client history tracking\n' +
     '• Activity logging\n\n' +
     'To set up:\n' +
     '1. Click "Appointment System → Initialize System"\n' +
     '2. Click "Appointment System → Calendar → Setup Edit Trigger"\n' +
-    '3. All sheets will be created automatically\n\n' +
+    '3. Click "Appointment System → Book Appointment" to start booking\n\n' +
     'For help: https://github.com/jjgao/openslots',
     ui.ButtonSet.OK
   );
@@ -150,8 +157,7 @@ function createProvidersSheet() {
   // Format header row
   formatHeaderRow(sheet, headers.length);
 
-  // Add auto-increment formula for provider_id
-  addAutoIncrementFormula(sheet, 'PROV', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addEmailValidation(sheet, 'C2:C1000', true);  // email (allow blank)
@@ -184,11 +190,14 @@ function createServicesSheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'SERV', 'B');
+  // IDs are auto-generated in code when adding rows
+
+  // Note: default_duration_options uses pipe (|) delimiter for multiple options
+  // Example: "30|60" for 30 or 60 minute options
 
   sheet.setColumnWidth(1, 100);  // service_id
   sheet.setColumnWidth(2, 180);  // service_name
-  sheet.setColumnWidth(3, 200);  // default_duration_options
+  sheet.setColumnWidth(3, 200);  // default_duration_options (pipe-delimited: "30|60")
   sheet.setColumnWidth(4, 300);  // description
 
   Logger.log('Services sheet created');
@@ -208,7 +217,7 @@ function createClientsSheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'CLI', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addPhoneValidation(sheet, 'C2:C1000', false);  // phone (required)
@@ -245,7 +254,7 @@ function createAppointmentsSheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'APT', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDateValidation(sheet, 'E2:E1000', false);  // appointment_date (required)
@@ -290,7 +299,7 @@ function createProviderAvailabilitySheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'AVL', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDropdownValidation(sheet, 'C2:C1000',
@@ -328,7 +337,7 @@ function createProviderExceptionsSheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'EXC', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDateValidation(sheet, 'C2:C1000', false);  // exception_date (required)
@@ -362,7 +371,7 @@ function createActivityLogSheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'LOG', 'C');  // Trigger on action_type (C) instead of timestamp
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDropdownValidation(sheet, 'C2:C1000',
@@ -397,7 +406,7 @@ function createConfirmationTrackingSheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'CNF', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDateValidation(sheet, 'C2:C1000', true);  // confirmation_date
@@ -464,18 +473,9 @@ function formatHeaderRow(sheet, numColumns) {
 }
 
 /**
- * Helper function: Adds auto-increment formula to column A
- * @param {Sheet} sheet - The sheet to add formula to
- * @param {string} prefix - ID prefix (e.g., 'PROV', 'CLI', 'APT')
- * @param {string} triggerColumn - Column that triggers ID generation (e.g., 'B')
+ * IDs are now generated directly in code (see DataAccess.gs addRow function)
+ * No formulas needed - safer and simpler!
  */
-function addAutoIncrementFormula(sheet, prefix, triggerColumn) {
-  const formula = `=IF(${triggerColumn}2<>"", "${prefix}"&TEXT(ROW()-1,"000"), "")`;
-  sheet.getRange('A2').setFormula(formula);
-
-  // Copy formula down to row 100 for easier manual entry
-  sheet.getRange('A2:A100').setFormula(formula);
-}
 
 /**
  * Creates the Business_Holidays sheet
@@ -500,7 +500,7 @@ function createBusinessHolidaysSheet() {
   sheet.setColumnWidth(5, 300);  // notes
 
   // Add auto-increment formula for holiday_id
-  addAutoIncrementFormula(sheet, 'HOL', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDateValidation(sheet, 'B2:B1000', false);  // Date required
@@ -533,7 +533,7 @@ function createBusinessExceptionsSheet() {
   sheet.setColumnWidth(6, 300);  // notes
 
   // Add auto-increment formula for exception_id
-  addAutoIncrementFormula(sheet, 'EXC', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDateValidation(sheet, 'B2:B1000', false);  // Date required
