@@ -160,7 +160,7 @@
 
       <div class="form-group">
         <label for="clientSearch">Search by name or phone</label>
-        <input type="text" id="clientSearch" placeholder="Enter name or phone number">
+        <input type="text" id="clientSearch" placeholder="Enter name or phone number" onkeypress="handleSearchKeyPress(event)">
       </div>
 
       <button class="secondary-btn" onclick="searchClient()">Search</button>
@@ -288,6 +288,13 @@
         option.textContent = s.service_name;
         select.appendChild(option);
       });
+    }
+
+    function handleSearchKeyPress(event) {
+      if (event.key === 'Enter' || event.keyCode === 13) {
+        event.preventDefault();
+        searchClient();
+      }
     }
 
     function searchClient() {
