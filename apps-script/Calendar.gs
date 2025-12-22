@@ -6,21 +6,22 @@
  */
 
 /**
- * Calendar color IDs (Google Calendar uses string IDs 1-11)
+ * Calendar color hex codes for CalendarApp.setColor()
+ * These are the actual hex values Google Calendar uses
  * @const {Object}
  */
 const CALENDAR_COLORS = {
-  LAVENDER: '1',
-  SAGE: '2',
-  GRAPE: '3',
-  FLAMINGO: '4',
-  BANANA: '5',
-  TANGERINE: '6',
-  PEACOCK: '7',
-  GRAPHITE: '8',
-  BLUEBERRY: '9',
-  BASIL: '10',
-  TOMATO: '11'
+  LAVENDER: '#9fc6e7',    // Light blue
+  SAGE: '#42d692',        // Light green
+  GRAPE: '#9e69af',       // Purple
+  FLAMINGO: '#ff887c',    // Coral/pink
+  BANANA: '#fbd75b',      // Yellow
+  TANGERINE: '#ffb878',   // Orange
+  PEACOCK: '#16a765',     // Teal/green
+  GRAPHITE: '#92e1c0',    // Mint
+  BLUEBERRY: '#9fc6e7',   // Blue
+  BASIL: '#42d692',       // Green
+  TOMATO: '#ff6961'       // Red
 };
 
 /**
