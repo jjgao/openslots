@@ -427,7 +427,7 @@
 
       if (!service) return;
 
-      var duration = parseInt(service.duration_options.toString().split(',')[0]);
+      var duration = parseInt(service.default_duration_options.toString().split(',')[0]);
 
       // Show loading
       document.getElementById('timeSlots').innerHTML = '<div class="loading">Loading available times...</div>';

@@ -223,7 +223,7 @@ function bookAppointmentFromUI(bookingData) {
     }
 
     // Parse duration (use first option if multiple)
-    var durationOptions = service.duration_options.toString().split(',');
+    var durationOptions = service.default_duration_options.toString().split(',');
     var duration = parseInt(durationOptions[0]);
 
     // Calculate end time
