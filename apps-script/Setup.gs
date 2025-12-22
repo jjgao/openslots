@@ -478,8 +478,8 @@ function addAutoIncrementFormula(sheet, prefix, triggerColumn) {
   const formula = `=IF(${triggerColumn}2<>"", "${prefix}"&TEXT(ROW()-1,"000"), "")`;
   sheet.getRange('A2').setFormula(formula);
 
-  // Copy formula down to row 100 for easier manual entry
-  sheet.getRange('A2:A100').setFormula(formula);
+  // Copy formula down to row 1000 to handle programmatic additions
+  sheet.getRange('A2:A1000').setFormula(formula);
 }
 
 /**
