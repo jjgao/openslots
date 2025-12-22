@@ -476,10 +476,8 @@ function formatHeaderRow(sheet, numColumns) {
  */
 function addAutoIncrementFormula(sheet, prefix, triggerColumn) {
   const formula = `=IF(${triggerColumn}2<>"", "${prefix}"&TEXT(ROW()-1,"000"), "")`;
+  // Just set formula in row 2 - it will auto-fill as rows are added
   sheet.getRange('A2').setFormula(formula);
-
-  // Copy formula down to row 1000 to handle programmatic additions
-  sheet.getRange('A2:A1000').setFormula(formula);
 }
 
 /**
