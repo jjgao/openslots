@@ -155,8 +155,7 @@ function createProvidersSheet() {
   // Format header row
   formatHeaderRow(sheet, headers.length);
 
-  // Add auto-increment formula for provider_id
-  addAutoIncrementFormula(sheet, 'PROV', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addEmailValidation(sheet, 'C2:C1000', true);  // email (allow blank)
@@ -189,7 +188,7 @@ function createServicesSheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'SERV', 'B');
+  // IDs are auto-generated in code when adding rows
 
   sheet.setColumnWidth(1, 100);  // service_id
   sheet.setColumnWidth(2, 180);  // service_name
@@ -213,7 +212,7 @@ function createClientsSheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'CLI', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addPhoneValidation(sheet, 'C2:C1000', false);  // phone (required)
@@ -250,7 +249,7 @@ function createAppointmentsSheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'APT', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDateValidation(sheet, 'E2:E1000', false);  // appointment_date (required)
@@ -295,7 +294,7 @@ function createProviderAvailabilitySheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'AVL', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDropdownValidation(sheet, 'C2:C1000',
@@ -333,7 +332,7 @@ function createProviderExceptionsSheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'EXC', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDateValidation(sheet, 'C2:C1000', false);  // exception_date (required)
@@ -367,7 +366,7 @@ function createActivityLogSheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'LOG', 'C');  // Trigger on action_type (C) instead of timestamp
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDropdownValidation(sheet, 'C2:C1000',
@@ -402,7 +401,7 @@ function createConfirmationTrackingSheet() {
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
-  addAutoIncrementFormula(sheet, 'CNF', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDateValidation(sheet, 'C2:C1000', true);  // confirmation_date
@@ -469,16 +468,9 @@ function formatHeaderRow(sheet, numColumns) {
 }
 
 /**
- * Helper function: Adds auto-increment formula to column A
- * @param {Sheet} sheet - The sheet to add formula to
- * @param {string} prefix - ID prefix (e.g., 'PROV', 'CLI', 'APT')
- * @param {string} triggerColumn - Column that triggers ID generation (e.g., 'B')
+ * IDs are now generated directly in code (see DataAccess.gs addRow function)
+ * No formulas needed - safer and simpler!
  */
-function addAutoIncrementFormula(sheet, prefix, triggerColumn) {
-  const formula = `=IF(${triggerColumn}2<>"", "${prefix}"&TEXT(ROW()-1,"000"), "")`;
-  // Just set formula in row 2 - it will auto-fill as rows are added
-  sheet.getRange('A2').setFormula(formula);
-}
 
 /**
  * Creates the Business_Holidays sheet
@@ -503,7 +495,7 @@ function createBusinessHolidaysSheet() {
   sheet.setColumnWidth(5, 300);  // notes
 
   // Add auto-increment formula for holiday_id
-  addAutoIncrementFormula(sheet, 'HOL', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDateValidation(sheet, 'B2:B1000', false);  // Date required
@@ -536,7 +528,7 @@ function createBusinessExceptionsSheet() {
   sheet.setColumnWidth(6, 300);  // notes
 
   // Add auto-increment formula for exception_id
-  addAutoIncrementFormula(sheet, 'EXC', 'B');
+  // IDs are auto-generated in code when adding rows
 
   // Add data validation
   addDateValidation(sheet, 'B2:B1000', false);  // Date required
