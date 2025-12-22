@@ -287,6 +287,9 @@ function getOrCreateProviderCalendar(provider) {
     if (provider.calendar_id) {
       const existingCalendar = CalendarApp.getCalendarById(provider.calendar_id);
       if (existingCalendar) {
+        // Ensure calendar color matches provider color
+        const colorId = getProviderColor(provider.provider_id);
+        existingCalendar.setColor(colorId);
         return existingCalendar;
       }
       // Calendar was deleted externally, clear the stored ID and create new one
@@ -300,12 +303,15 @@ function getOrCreateProviderCalendar(provider) {
     const allCalendars = CalendarApp.getAllCalendars();
     for (let i = 0; i < allCalendars.length; i++) {
       if (allCalendars[i].getName() === calendarName) {
-        // Found existing calendar, store the ID and return it
+        // Found existing calendar, store the ID and set color
         const calId = allCalendars[i].getId();
+        const colorId = getProviderColor(provider.provider_id);
+        allCalendars[i].setColor(colorId);
+
         updateRecordById(SHEETS.PROVIDERS, provider.provider_id, {
           calendar_id: calId
         });
-        Logger.log(`Found existing calendar for ${provider.name}: ${calId}`);
+        Logger.log(`Found existing calendar for ${provider.name}: ${calId}, set color ${colorId}`);
         return allCalendars[i];
       }
     }
@@ -316,13 +322,17 @@ function getOrCreateProviderCalendar(provider) {
       timeZone: Session.getScriptTimeZone()
     });
 
+    // Set calendar color to match provider color
+    const colorId = getProviderColor(provider.provider_id);
+    newCalendar.setColor(colorId);
+
     // Store the calendar ID in the provider record
     const newCalId = newCalendar.getId();
     updateRecordById(SHEETS.PROVIDERS, provider.provider_id, {
       calendar_id: newCalId
     });
 
-    Logger.log(`Created new calendar for ${provider.name}: ${newCalId}`);
+    Logger.log(`Created new calendar for ${provider.name}: ${newCalId} with color ${colorId}`);
     return newCalendar;
 
   } catch (error) {
