@@ -95,15 +95,84 @@ function setCalendarColor(calendarId, providerId) {
   try {
     var colorHex = getProviderColor(providerId);
 
-    // Use Calendar API to update calendar color
-    var calendar = Calendar.CalendarList.get(calendarId);
-    calendar.backgroundColor = colorHex;
-    calendar.foregroundColor = '#000000'; // Black text
-    Calendar.CalendarList.update(calendar, calendarId);
+    Logger.log(`Attempting to set calendar color for provider ${providerId} to ${colorHex}`);
 
-    Logger.log(`Set calendar ${calendarId} color to ${colorHex}`);
+    // Use Calendar API to update calendar color
+    var calendarListEntry = Calendar.CalendarList.get(calendarId);
+
+    Logger.log(`Current backgroundColor: ${calendarListEntry.backgroundColor}`);
+
+    // Update the color properties
+    calendarListEntry.backgroundColor = colorHex;
+    calendarListEntry.foregroundColor = '#000000'; // Black text
+
+    // Update the calendar in the Calendar API
+    var updatedEntry = Calendar.CalendarList.update(calendarListEntry, calendarId, {
+      colorRgbFormat: true
+    });
+
+    Logger.log(`Successfully set calendar ${calendarId} (provider ${providerId}) color to ${colorHex}`);
+    Logger.log(`Confirmed new backgroundColor: ${updatedEntry.backgroundColor}`);
   } catch (e) {
-    Logger.log(`Could not set calendar color: ${e.toString()}`);
+    Logger.log(`ERROR setting calendar color for ${providerId}: ${e.toString()}`);
+    Logger.log(`Stack: ${e.stack}`);
+  }
+}
+
+/**
+ * Manually update all provider calendar colors
+ * Run this from the menu if colors aren't updating correctly
+ */
+function updateAllProviderCalendarColors() {
+  try {
+    Logger.log('=== Starting Calendar Color Update ===');
+
+    var providers = getProviders();
+    var updated = 0;
+    var failed = 0;
+    var details = [];
+
+    Logger.log(`Found ${providers.length} providers`);
+
+    for (var i = 0; i < providers.length; i++) {
+      var provider = providers[i];
+      var color = getProviderColor(provider.provider_id);
+
+      Logger.log(`\nProvider ${i}: ${provider.name} (${provider.provider_id})`);
+      Logger.log(`  Assigned color: ${color}`);
+      Logger.log(`  Calendar ID: ${provider.calendar_id || 'NONE'}`);
+
+      if (provider.calendar_id) {
+        try {
+          setCalendarColor(provider.calendar_id, provider.provider_id);
+          updated++;
+          details.push(`${provider.name}: ${color}`);
+        } catch (e) {
+          Logger.log(`  FAILED: ${e.toString()}`);
+          failed++;
+          details.push(`${provider.name}: FAILED`);
+        }
+      } else {
+        Logger.log(`  SKIPPED: No calendar ID`);
+      }
+    }
+
+    var ui = SpreadsheetApp.getUi();
+    var message = `Successfully updated: ${updated}\nFailed: ${failed}\n\nColors:\n${details.join('\n')}`;
+
+    ui.alert(
+      'Calendar Colors Updated',
+      message,
+      ui.ButtonSet.OK
+    );
+
+    Logger.log(`\n=== Update Complete: ${updated} updated, ${failed} failed ===`);
+  } catch (error) {
+    Logger.log(`ERROR in updateAllProviderCalendarColors: ${error.toString()}`);
+    Logger.log(`Stack: ${error.stack}`);
+
+    var ui = SpreadsheetApp.getUi();
+    ui.alert('Error', `Failed to update calendar colors:\n${error.toString()}`, ui.ButtonSet.OK);
   }
 }
 
