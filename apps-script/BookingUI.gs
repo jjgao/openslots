@@ -80,7 +80,7 @@ function getAvailableTimeSlots(providerId, dateStr, duration) {
     // Generate available slots from time blocks
     // Note: getProviderAvailability already subtracts existing appointments,
     // so we pass empty array for existingAppointments
-    var slots = generateTimeSlots(timeBlocks, [], duration);
+    var slots = generateTimeSlots(timeBlocks, [], duration, date);
 
     if (slots.length === 0) {
       return {
@@ -109,11 +109,21 @@ function getAvailableTimeSlots(providerId, dateStr, duration) {
  * @param {Array<Object>} timeBlocks - Available time blocks
  * @param {Array<Object>} existingAppointments - Existing appointments
  * @param {number} duration - Desired duration in minutes
+ * @param {Date} date - The appointment date
  * @returns {Array<string>} Array of available time slots in HH:MM format
  */
-function generateTimeSlots(timeBlocks, existingAppointments, duration) {
+function generateTimeSlots(timeBlocks, existingAppointments, duration, date) {
   var slots = [];
   var slotInterval = 30; // Generate slots every 30 minutes
+
+  // Check if the date is today - if so, filter out past times
+  var now = new Date();
+  var isToday = date &&
+                date.getFullYear() === now.getFullYear() &&
+                date.getMonth() === now.getMonth() &&
+                date.getDate() === now.getDate();
+
+  var currentMinutes = isToday ? (now.getHours() * 60 + now.getMinutes()) : 0;
 
   for (var i = 0; i < timeBlocks.length; i++) {
     var block = timeBlocks[i];
@@ -123,6 +133,11 @@ function generateTimeSlots(timeBlocks, existingAppointments, duration) {
 
     // Generate slots within this time block
     for (var minutes = startMinutes; minutes + duration <= endMinutes; minutes += slotInterval) {
+      // Skip past time slots if booking for today
+      if (isToday && minutes <= currentMinutes) {
+        continue;
+      }
+
       var slotTime = minutesToTime(minutes);
 
       // Check if this slot conflicts with existing appointments

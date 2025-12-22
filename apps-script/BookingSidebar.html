@@ -288,6 +288,10 @@
         option.textContent = s.service_name;
         select.appendChild(option);
       });
+
+      // Set minimum date to today (disable past dates)
+      var today = new Date().toISOString().split('T')[0];
+      document.getElementById('appointmentDate').min = today;
     }
 
     function handleSearchKeyPress(event) {
