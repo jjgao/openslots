@@ -117,8 +117,9 @@ function generateTimeSlots(timeBlocks, existingAppointments, duration) {
 
   for (var i = 0; i < timeBlocks.length; i++) {
     var block = timeBlocks[i];
-    var startMinutes = timeToMinutes(block.start);
-    var endMinutes = timeToMinutes(block.end);
+    // Note: block.start and block.end are already in minutes (from getProviderAvailability)
+    var startMinutes = typeof block.start === 'number' ? block.start : timeToMinutes(block.start);
+    var endMinutes = typeof block.end === 'number' ? block.end : timeToMinutes(block.end);
 
     // Generate slots within this time block
     for (var minutes = startMinutes; minutes + duration <= endMinutes; minutes += slotInterval) {
