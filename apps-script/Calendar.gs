@@ -125,9 +125,7 @@ function createCalendarEvent(appointmentId) {
       location: getConfig('business_name', 'Office')
     });
 
-    // Set event color based on provider (each provider gets a unique color)
-    const colorId = getProviderColor(appointment.provider_id);
-    event.setColor(colorId);
+    // Event color is inherited from calendar color (no need to set individually)
 
     // Store event ID in appointment
     const eventId = event.getId();
@@ -202,9 +200,7 @@ function updateCalendarEvent(appointmentId) {
     event.setDescription(eventDescription);
     event.setTime(startTime, endTime);
 
-    // Update color based on provider (each provider gets a unique color)
-    const colorId = getProviderColor(appointment.provider_id);
-    event.setColor(colorId);
+    // Event color is inherited from calendar color (no need to set individually)
 
     // Log the update
     logCalendarUpdate(appointmentId, appointment.calendar_event_id);
@@ -500,44 +496,16 @@ function buildEventDescription(appointment, client, service) {
 }
 
 /**
- * Syncs calendar event color with appointment status
- * @param {string} appointmentId - The appointment ID
- * @param {string} newStatus - The new status
+ * Legacy function - no longer needed since event colors inherit from calendar color
+ * Calendar color is set per provider, not per event status
+ * @param {string} appointmentId - The appointment ID (unused)
+ * @param {string} newStatus - The new status (unused)
  * @returns {Object} Result object
  */
 function syncCalendarEventColor(appointmentId, newStatus) {
-  try {
-    const appointment = getAppointment(appointmentId);
-    if (!appointment || !appointment.calendar_event_id) {
-      return { success: false, error: 'No calendar event to update' };
-    }
-
-    const provider = getProvider(appointment.provider_id);
-    if (!provider) {
-      return { success: false, error: 'Provider not found' };
-    }
-
-    const calendar = getOrCreateProviderCalendar(provider);
-    if (!calendar) {
-      return { success: false, error: 'Calendar not found' };
-    }
-
-    const event = calendar.getEventById(appointment.calendar_event_id);
-    if (!event) {
-      return { success: false, error: 'Calendar event not found' };
-    }
-
-    const colorId = STATUS_COLORS[newStatus] || CALENDAR_COLORS.BLUEBERRY;
-    event.setColor(colorId);
-
-    Logger.log(`Calendar event color updated for ${appointmentId}: ${newStatus}`);
-
-    return { success: true };
-
-  } catch (error) {
-    Logger.log(`Error syncing calendar color: ${error.toString()}`);
-    return { success: false, error: error.toString() };
-  }
+  // Event colors now inherit from calendar color (provider-based)
+  // No need to update individual event colors
+  return { success: true };
 }
 
 /**
