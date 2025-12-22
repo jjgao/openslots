@@ -205,14 +205,15 @@ function bookAppointmentFromUI(bookingData) {
   try {
     // Validate required fields
     if (!bookingData.clientId || !bookingData.providerId ||
-        !bookingData.serviceId || !bookingData.date || !bookingData.startTime) {
+        !bookingData.serviceId || !bookingData.duration ||
+        !bookingData.date || !bookingData.startTime) {
       return {
         success: false,
         error: 'All fields are required'
       };
     }
 
-    // Get service to determine duration
+    // Get service to validate it exists
     var service = getService(bookingData.serviceId);
     if (!service) {
       return {
@@ -221,9 +222,8 @@ function bookAppointmentFromUI(bookingData) {
       };
     }
 
-    // Parse duration (use first option if multiple)
-    var durationOptions = service.default_duration_options.toString().split(',');
-    var duration = parseInt(durationOptions[0]);
+    // Use the duration from booking data (user selected)
+    var duration = parseInt(bookingData.duration);
 
     // Calculate end time
     var startMinutes = timeToMinutes(bookingData.startTime);

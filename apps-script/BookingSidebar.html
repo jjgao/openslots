@@ -215,8 +215,15 @@
 
       <div class="form-group">
         <label for="service">Service *</label>
-        <select id="service" onchange="checkAvailability()">
+        <select id="service" onchange="onServiceChange()">
           <option value="">Select service...</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="durationGroup" class="hidden">
+        <label for="duration">Duration *</label>
+        <select id="duration" onchange="checkAvailability()">
+          <option value="">Select duration...</option>
         </select>
       </div>
 
@@ -409,25 +416,57 @@
         .createClientFromUI(clientData);
     }
 
-    function checkAvailability() {
-      var providerId = document.getElementById('provider').value;
+    function onServiceChange() {
       var serviceId = document.getElementById('service').value;
-      var date = document.getElementById('appointmentDate').value;
+      var durationSelect = document.getElementById('duration');
+      var durationGroup = document.getElementById('durationGroup');
 
-      if (!providerId || !serviceId || !date) {
-        document.getElementById('timeSlotsGroup').classList.add('hidden');
-        checkCanBook();
+      // Clear duration dropdown
+      durationSelect.innerHTML = '<option value="">Select duration...</option>';
+
+      if (!serviceId) {
+        durationGroup.classList.add('hidden');
+        checkAvailability();
         return;
       }
 
-      // Get service duration
+      // Get service and populate duration options
       var service = formData.services.find(function(s) {
         return s.service_id === serviceId;
       });
 
-      if (!service) return;
+      if (service) {
+        var durationOptions = service.default_duration_options.toString().split(',');
 
-      var duration = parseInt(service.default_duration_options.toString().split(',')[0]);
+        durationOptions.forEach(function(duration) {
+          var option = document.createElement('option');
+          option.value = duration.trim();
+          option.textContent = duration.trim() + ' minutes';
+          durationSelect.appendChild(option);
+        });
+
+        // If only one option, select it automatically
+        if (durationOptions.length === 1) {
+          durationSelect.value = durationOptions[0].trim();
+        }
+
+        durationGroup.classList.remove('hidden');
+      }
+
+      checkAvailability();
+    }
+
+    function checkAvailability() {
+      var providerId = document.getElementById('provider').value;
+      var serviceId = document.getElementById('service').value;
+      var duration = document.getElementById('duration').value;
+      var date = document.getElementById('appointmentDate').value;
+
+      if (!providerId || !serviceId || !duration || !date) {
+        document.getElementById('timeSlotsGroup').classList.add('hidden');
+        checkCanBook();
+        return;
+      }
 
       // Show loading
       document.getElementById('timeSlots').innerHTML = '<div class="loading">Loading available times...</div>';
@@ -450,7 +489,7 @@
           document.getElementById('timeSlots').innerHTML = '<div class="error">Error: ' + error.message + '</div>';
           checkCanBook();
         })
-        .getAvailableTimeSlots(providerId, date, duration);
+        .getAvailableTimeSlots(providerId, date, parseInt(duration));
     }
 
     function displayTimeSlots(slots) {
@@ -486,6 +525,7 @@
       var canBook = selectedClientId &&
                     document.getElementById('provider').value &&
                     document.getElementById('service').value &&
+                    document.getElementById('duration').value &&
                     document.getElementById('appointmentDate').value &&
                     selectedTimeSlot;
 
@@ -500,6 +540,7 @@
         clientId: selectedClientId,
         providerId: document.getElementById('provider').value,
         serviceId: document.getElementById('service').value,
+        duration: parseInt(document.getElementById('duration').value),
         date: document.getElementById('appointmentDate').value,
         startTime: selectedTimeSlot,
         notes: document.getElementById('notes').value
