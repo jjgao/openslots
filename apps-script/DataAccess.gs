@@ -209,7 +209,17 @@ function addRow(sheetName, rowData) {
       return -1;
     }
 
-    const newRow = sheet.getLastRow() + 1;
+    // Find first empty row by checking column B (trigger column)
+    var newRow = 2; // Start at row 2 (after header)
+    var maxRows = 1000;
+    var columnBValues = sheet.getRange(2, 2, maxRows, 1).getValues();
+
+    for (var i = 0; i < columnBValues.length; i++) {
+      if (!columnBValues[i][0]) {
+        newRow = i + 2; // +2 because we started at row 2
+        break;
+      }
+    }
 
     // Start from column B (column 2) since column A has auto-increment formula
     sheet.getRange(newRow, 2, 1, rowData.length).setValues([rowData]);
