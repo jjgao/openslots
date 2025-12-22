@@ -190,9 +190,12 @@ function createServicesSheet() {
   formatHeaderRow(sheet, headers.length);
   // IDs are auto-generated in code when adding rows
 
+  // Note: default_duration_options uses pipe (|) delimiter for multiple options
+  // Example: "30|60" for 30 or 60 minute options
+
   sheet.setColumnWidth(1, 100);  // service_id
   sheet.setColumnWidth(2, 180);  // service_name
-  sheet.setColumnWidth(3, 200);  // default_duration_options
+  sheet.setColumnWidth(3, 200);  // default_duration_options (pipe-delimited: "30|60")
   sheet.setColumnWidth(4, 300);  // description
 
   Logger.log('Services sheet created');

@@ -438,7 +438,8 @@
       if (service) {
         // Ensure duration_options is a string, handle both string and number types
         var durationStr = String(service.default_duration_options);
-        var durationOptions = durationStr.split(',').map(function(d) { return d.trim(); });
+        // Split by pipe (|) to avoid issues with comma being interpreted as number formatting
+        var durationOptions = durationStr.split('|').map(function(d) { return d.trim(); });
 
         durationOptions.forEach(function(duration) {
           var option = document.createElement('option');

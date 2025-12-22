@@ -91,12 +91,12 @@ function addSampleProviders() {
 function addSampleServices() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Services');
   const sampleData = [
-    ['Initial Consultation', '30,60', 'First-time client consultation'],
+    ['Initial Consultation', '30|60', 'First-time client consultation'],
     ['Follow-up Appointment', '30', 'Follow-up visit for existing clients'],
     ['Standard Treatment', '60', 'Regular treatment session'],
-    ['Extended Treatment', '90,120', 'Extended treatment session for complex cases'],
-    ['Group Session', '60,90', 'Group session (multiple clients)'],
-    ['Emergency Visit', '30,60', 'Urgent/emergency appointment'],
+    ['Extended Treatment', '90|120', 'Extended treatment session for complex cases'],
+    ['Group Session', '60|90', 'Group session (multiple clients)'],
+    ['Emergency Visit', '30|60', 'Urgent/emergency appointment'],
     ['Annual Review', '60', 'Annual checkup and assessment']
   ];
 
