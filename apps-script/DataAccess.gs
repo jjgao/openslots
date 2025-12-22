@@ -209,7 +209,21 @@ function addRow(sheetName, rowData) {
       return -1;
     }
 
-    const newRow = sheet.getLastRow() + 1;
+    // Get last row with actual data in column B (not just formulas)
+    // Use getLastRow() as upper bound, then check backwards from there
+    var lastRow = sheet.getLastRow();
+    var newRow = 2; // Default to row 2 if no data found
+
+    if (lastRow > 1) {
+      // Read column B values to find last non-empty row
+      var columnBValues = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+      for (var i = columnBValues.length - 1; i >= 0; i--) {
+        if (columnBValues[i][0]) {
+          newRow = i + 3; // +2 for starting at row 2, +1 for next row
+          break;
+        }
+      }
+    }
 
     // Start from column B (column 2) since column A has auto-increment formula
     sheet.getRange(newRow, 2, 1, rowData.length).setValues([rowData]);
