@@ -58,7 +58,7 @@ const PROVIDER_COLOR_PALETTE = [
 /**
  * Gets a color for a provider based on their position in the provider list
  * @param {string} providerId - The provider ID
- * @returns {string} Calendar color ID
+ * @returns {string} Calendar color hex code
  */
 function getProviderColor(providerId) {
   try {
@@ -83,6 +83,27 @@ function getProviderColor(providerId) {
   } catch (error) {
     Logger.log('Error getting provider color: ' + error.toString());
     return CALENDAR_COLORS.BLUEBERRY;
+  }
+}
+
+/**
+ * Sets the color of a calendar using the Calendar API
+ * @param {string} calendarId - The calendar ID
+ * @param {string} providerId - The provider ID
+ */
+function setCalendarColor(calendarId, providerId) {
+  try {
+    var colorHex = getProviderColor(providerId);
+
+    // Use Calendar API to update calendar color
+    var calendar = Calendar.CalendarList.get(calendarId);
+    calendar.backgroundColor = colorHex;
+    calendar.foregroundColor = '#000000'; // Black text
+    Calendar.CalendarList.update(calendar, calendarId);
+
+    Logger.log(`Set calendar ${calendarId} color to ${colorHex}`);
+  } catch (e) {
+    Logger.log(`Could not set calendar color: ${e.toString()}`);
   }
 }
 
@@ -284,13 +305,8 @@ function getOrCreateProviderCalendar(provider) {
     if (provider.calendar_id) {
       const existingCalendar = CalendarApp.getCalendarById(provider.calendar_id);
       if (existingCalendar) {
-        // Set calendar color using CalendarApp method (for owned calendars)
-        try {
-          const colorId = getProviderColor(provider.provider_id);
-          CalendarApp.setColor(provider.calendar_id, colorId);
-        } catch (e) {
-          Logger.log('Could not set calendar color: ' + e.toString());
-        }
+        // Set calendar color using Calendar API
+        setCalendarColor(provider.calendar_id, provider.provider_id);
         return existingCalendar;
       }
       // Calendar was deleted externally, clear the stored ID and create new one
@@ -306,17 +322,12 @@ function getOrCreateProviderCalendar(provider) {
       if (allCalendars[i].getName() === calendarName) {
         // Found existing calendar, store the ID and set color
         const calId = allCalendars[i].getId();
-        const colorId = getProviderColor(provider.provider_id);
-        try {
-          CalendarApp.setColor(calId, colorId);
-        } catch (e) {
-          Logger.log('Could not set calendar color: ' + e.toString());
-        }
+        setCalendarColor(calId, provider.provider_id);
 
         updateRecordById(SHEETS.PROVIDERS, provider.provider_id, {
           calendar_id: calId
         });
-        Logger.log(`Found existing calendar for ${provider.name}: ${calId}, set color ${colorId}`);
+        Logger.log(`Found existing calendar for ${provider.name}: ${calId}`);
         return allCalendars[i];
       }
     }
@@ -334,13 +345,8 @@ function getOrCreateProviderCalendar(provider) {
     });
 
     // Set calendar color to match provider color (after calendar is created)
-    const colorId = getProviderColor(provider.provider_id);
-    try {
-      CalendarApp.setColor(newCalId, colorId);
-      Logger.log(`Created new calendar for ${provider.name}: ${newCalId} with color ${colorId}`);
-    } catch (e) {
-      Logger.log(`Created calendar ${newCalId}, but could not set color: ${e.toString()}`);
-    }
+    setCalendarColor(newCalId, provider.provider_id);
+    Logger.log(`Created new calendar for ${provider.name}: ${newCalId}`);
 
     return newCalendar;
 
