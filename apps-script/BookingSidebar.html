@@ -436,18 +436,20 @@
       });
 
       if (service) {
-        var durationOptions = service.default_duration_options.toString().split(',');
+        // Ensure duration_options is a string, handle both string and number types
+        var durationStr = String(service.default_duration_options);
+        var durationOptions = durationStr.split(',').map(function(d) { return d.trim(); });
 
         durationOptions.forEach(function(duration) {
           var option = document.createElement('option');
-          option.value = duration.trim();
-          option.textContent = duration.trim() + ' minutes';
+          option.value = duration;
+          option.textContent = duration + ' minutes';
           durationSelect.appendChild(option);
         });
 
-        // If only one option, select it automatically
-        if (durationOptions.length === 1) {
-          durationSelect.value = durationOptions[0].trim();
+        // Always auto-select the first option
+        if (durationOptions.length > 0) {
+          durationSelect.value = durationOptions[0];
         }
 
         durationGroup.classList.remove('hidden');
