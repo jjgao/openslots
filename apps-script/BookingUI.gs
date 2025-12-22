@@ -113,7 +113,7 @@ function getAvailableTimeSlots(providerId, dateStr, duration) {
  */
 function generateTimeSlots(timeBlocks, existingAppointments, duration) {
   var slots = [];
-  var slotInterval = 15; // Generate slots every 15 minutes
+  var slotInterval = 30; // Generate slots every 30 minutes
 
   for (var i = 0; i < timeBlocks.length; i++) {
     var block = timeBlocks[i];

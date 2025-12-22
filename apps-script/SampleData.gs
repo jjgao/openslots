@@ -457,7 +457,7 @@ function addSampleSystemConfig() {
     ['business_hours_end', '17:00'],
     ['business_days', 'Monday,Tuesday,Wednesday,Thursday,Friday'],
     ['default_appointment_duration', '30'],
-    ['appointment_slot_increment', '15'],
+    ['appointment_slot_increment', '30'],
     ['timezone', 'America/New_York'],
     ['enable_email_notifications', 'Yes'],
     ['enable_sms_notifications', 'No'],
