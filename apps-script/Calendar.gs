@@ -283,9 +283,13 @@ function getOrCreateProviderCalendar(provider) {
     if (provider.calendar_id) {
       const existingCalendar = CalendarApp.getCalendarById(provider.calendar_id);
       if (existingCalendar) {
-        // Ensure calendar color matches provider color
-        const colorId = getProviderColor(provider.provider_id);
-        existingCalendar.setColor(colorId);
+        // Set calendar color using CalendarApp method (for owned calendars)
+        try {
+          const colorId = getProviderColor(provider.provider_id);
+          CalendarApp.setColor(provider.calendar_id, colorId);
+        } catch (e) {
+          Logger.log('Could not set calendar color: ' + e.toString());
+        }
         return existingCalendar;
       }
       // Calendar was deleted externally, clear the stored ID and create new one
@@ -302,7 +306,11 @@ function getOrCreateProviderCalendar(provider) {
         // Found existing calendar, store the ID and set color
         const calId = allCalendars[i].getId();
         const colorId = getProviderColor(provider.provider_id);
-        allCalendars[i].setColor(colorId);
+        try {
+          CalendarApp.setColor(calId, colorId);
+        } catch (e) {
+          Logger.log('Could not set calendar color: ' + e.toString());
+        }
 
         updateRecordById(SHEETS.PROVIDERS, provider.provider_id, {
           calendar_id: calId
@@ -318,17 +326,21 @@ function getOrCreateProviderCalendar(provider) {
       timeZone: Session.getScriptTimeZone()
     });
 
-    // Set calendar color to match provider color
-    const colorId = getProviderColor(provider.provider_id);
-    newCalendar.setColor(colorId);
-
     // Store the calendar ID in the provider record
     const newCalId = newCalendar.getId();
     updateRecordById(SHEETS.PROVIDERS, provider.provider_id, {
       calendar_id: newCalId
     });
 
-    Logger.log(`Created new calendar for ${provider.name}: ${newCalId} with color ${colorId}`);
+    // Set calendar color to match provider color (after calendar is created)
+    const colorId = getProviderColor(provider.provider_id);
+    try {
+      CalendarApp.setColor(newCalId, colorId);
+      Logger.log(`Created new calendar for ${provider.name}: ${newCalId} with color ${colorId}`);
+    } catch (e) {
+      Logger.log(`Created calendar ${newCalId}, but could not set color: ${e.toString()}`);
+    }
+
     return newCalendar;
 
   } catch (error) {
