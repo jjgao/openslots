@@ -294,3 +294,188 @@ function getClientDetails(clientId) {
     stats: stats
   };
 }
+
+// ============================================================================
+// MVP 4: Appointment Management UI Functions
+// ============================================================================
+
+/**
+ * Search appointments by various criteria
+ * @param {Object} searchParams - Search parameters
+ * @param {string} [searchParams.query] - General search query (client name, appointment ID)
+ * @param {string} [searchParams.date] - Specific date (YYYY-MM-DD)
+ * @param {string} [searchParams.providerId] - Provider ID
+ * @param {string} [searchParams.status] - Appointment status
+ * @returns {Array<Object>} Array of matching appointments with client/provider details
+ */
+function searchAppointmentsForUI(searchParams) {
+  try {
+    var appointments = getAppointments();
+    var clients = getClients();
+    var providers = getProviders();
+    var services = getServices();
+
+    // Create lookup maps
+    var clientMap = {};
+    clients.forEach(function(c) { clientMap[c.client_id] = c; });
+
+    var providerMap = {};
+    providers.forEach(function(p) { providerMap[p.provider_id] = p; });
+
+    var serviceMap = {};
+    services.forEach(function(s) { serviceMap[s.service_id] = s; });
+
+    // Filter appointments
+    var results = appointments.filter(function(apt) {
+      // Filter by query (client name or appointment ID)
+      if (searchParams.query) {
+        var query = searchParams.query.toLowerCase();
+        var client = clientMap[apt.client_id];
+        var clientName = client ? client.name.toLowerCase() : '';
+        var aptId = apt.appointment_id.toLowerCase();
+
+        if (clientName.indexOf(query) === -1 && aptId.indexOf(query) === -1) {
+          return false;
+        }
+      }
+
+      // Filter by date
+      if (searchParams.date && apt.appointment_date !== searchParams.date) {
+        return false;
+      }
+
+      // Filter by provider
+      if (searchParams.providerId && apt.provider_id !== searchParams.providerId) {
+        return false;
+      }
+
+      // Filter by status
+      if (searchParams.status && apt.status !== searchParams.status) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // Enhance results with related data
+    var enhancedResults = results.map(function(apt) {
+      return {
+        appointment_id: apt.appointment_id,
+        appointment_date: apt.appointment_date,
+        start_time: apt.start_time,
+        duration: apt.duration,
+        status: apt.status,
+        notes: apt.notes || '',
+        client: clientMap[apt.client_id] || {},
+        provider: providerMap[apt.provider_id] || {},
+        service: serviceMap[apt.service_id] || {}
+      };
+    });
+
+    // Sort by date and time (most recent first)
+    enhancedResults.sort(function(a, b) {
+      if (a.appointment_date !== b.appointment_date) {
+        return b.appointment_date.localeCompare(a.appointment_date);
+      }
+      return b.start_time.localeCompare(a.start_time);
+    });
+
+    return enhancedResults;
+
+  } catch (error) {
+    Logger.log('Error searching appointments: ' + error.toString());
+    return [];
+  }
+}
+
+/**
+ * Gets today's appointments for quick access
+ * @returns {Array<Object>} Today's appointments with details
+ */
+function getTodaysAppointmentsForUI() {
+  var today = normalizeDate(new Date());
+  return searchAppointmentsForUI({ date: today });
+}
+
+/**
+ * Cancels an appointment from UI
+ * @param {string} appointmentId - Appointment ID
+ * @param {string} reason - Cancellation reason
+ * @returns {Object} Result object
+ */
+function cancelAppointmentFromUI(appointmentId, reason) {
+  return cancelAppointment(appointmentId, reason);
+}
+
+/**
+ * Reschedules an appointment from UI
+ * @param {string} appointmentId - Appointment ID
+ * @param {Object} options - Reschedule options
+ * @returns {Object} Result object
+ */
+function rescheduleAppointmentFromUI(appointmentId, options) {
+  return rescheduleAppointment(appointmentId, options);
+}
+
+/**
+ * Checks in an appointment from UI
+ * @param {string} appointmentId - Appointment ID
+ * @returns {Object} Result object
+ */
+function checkInAppointmentFromUI(appointmentId) {
+  return checkInAppointment(appointmentId);
+}
+
+/**
+ * Marks appointment as no-show from UI
+ * @param {string} appointmentId - Appointment ID
+ * @param {string} [notes] - Optional notes
+ * @returns {Object} Result object
+ */
+function markNoShowFromUI(appointmentId, notes) {
+  return markNoShow(appointmentId, null, notes);
+}
+
+/**
+ * Completes an appointment from UI
+ * @param {string} appointmentId - Appointment ID
+ * @param {string} [notes] - Optional completion notes
+ * @returns {Object} Result object
+ */
+function completeAppointmentFromUI(appointmentId, notes) {
+  return completeAppointment(appointmentId, null, notes);
+}
+
+/**
+ * Gets full appointment details for management
+ * @param {string} appointmentId - Appointment ID
+ * @returns {Object} Appointment with all related data
+ */
+function getAppointmentDetailsForUI(appointmentId) {
+  try {
+    var appointment = getAppointmentById(appointmentId);
+    if (!appointment) {
+      return null;
+    }
+
+    var client = getClient(appointment.client_id);
+    var provider = getProvider(appointment.provider_id);
+    var service = getService(appointment.service_id);
+
+    return {
+      appointment: appointment,
+      client: client,
+      provider: provider,
+      service: service,
+      canCancel: canTransitionTo(appointment.status, 'Cancelled'),
+      canReschedule: canTransitionTo(appointment.status, 'Rescheduled'),
+      canCheckIn: canTransitionTo(appointment.status, 'Checked-in'),
+      canMarkNoShow: canTransitionTo(appointment.status, 'No-show'),
+      canComplete: canTransitionTo(appointment.status, 'Completed')
+    };
+
+  } catch (error) {
+    Logger.log('Error getting appointment details: ' + error.toString());
+    return null;
+  }
+}
