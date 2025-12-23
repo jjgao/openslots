@@ -12,7 +12,7 @@
  * @param {string} helpText - Optional help text shown on hover
  */
 function addDropdownValidation(sheet, range, options, helpText) {
-  const rule = SpreadsheetApp.newDataValidation()
+  var rule = SpreadsheetApp.newDataValidation()
     .requireValueInList(options)
     .setAllowInvalid(false)
     .setHelpText(helpText || 'Select a value from the list')
@@ -28,7 +28,7 @@ function addDropdownValidation(sheet, range, options, helpText) {
  * @param {boolean} allowBlank - Whether to allow blank values (default: true)
  */
 function addEmailValidation(sheet, range, allowBlank) {
-  const rule = SpreadsheetApp.newDataValidation()
+  var rule = SpreadsheetApp.newDataValidation()
     .requireTextIsEmail()
     .setAllowInvalid(allowBlank !== false)  // Default to true if not specified
     .setHelpText('Please enter a valid email address')
@@ -44,7 +44,7 @@ function addEmailValidation(sheet, range, allowBlank) {
  * @param {boolean} allowBlank - Whether to allow blank values (default: true)
  */
 function addDateValidation(sheet, range, allowBlank) {
-  const rule = SpreadsheetApp.newDataValidation()
+  var rule = SpreadsheetApp.newDataValidation()
     .requireDate()
     .setAllowInvalid(allowBlank !== false)
     .setHelpText('Please enter a valid date')
@@ -61,7 +61,7 @@ function addDateValidation(sheet, range, allowBlank) {
 function addTimeValidation(sheet, range) {
   // Simple validation: just require text contains ":"
   // This provides helpful hint without blocking valid time entries
-  const rule = SpreadsheetApp.newDataValidation()
+  var rule = SpreadsheetApp.newDataValidation()
     .requireTextContains(':')
     .setAllowInvalid(true)  // Show warning but allow entry
     .setHelpText('Format: HH:MM (e.g., 09:00, 14:30)')
@@ -94,12 +94,12 @@ function addPhoneValidation(sheet, range, allowBlank) {
  * @param {number} max - Maximum value (optional)
  */
 function addNumberValidation(sheet, range, min, max) {
-  let rule = SpreadsheetApp.newDataValidation().requireNumberBetween(
+  var rule = SpreadsheetApp.newDataValidation().requireNumberBetween(
     min !== undefined ? min : Number.MIN_SAFE_INTEGER,
     max !== undefined ? max : Number.MAX_SAFE_INTEGER
   );
 
-  let helpText = 'Enter a number';
+  var helpText = 'Enter a number';
   if (min !== undefined && max !== undefined) {
     helpText = `Enter a number between ${min} and ${max}`;
   } else if (min !== undefined) {
@@ -122,10 +122,10 @@ function addNumberValidation(sheet, range, min, max) {
  */
 function addTextPatternValidation(sheet, range, pattern, helpText) {
   // Using custom formula with REGEXMATCH
-  const firstCell = range.split(':')[0];
-  const formula = `=REGEXMATCH(TO_TEXT(${firstCell}), "${pattern}")`;
+  var firstCell = range.split(':')[0];
+  var formula = `=REGEXMATCH(TO_TEXT(${firstCell}), "${pattern}")`;
 
-  const rule = SpreadsheetApp.newDataValidation()
+  var rule = SpreadsheetApp.newDataValidation()
     .requireFormulaSatisfied(formula)
     .setAllowInvalid(false)
     .setHelpText(helpText)
@@ -141,7 +141,7 @@ function addTextPatternValidation(sheet, range, pattern, helpText) {
  * @param {string} text - Text that must be contained
  */
 function addTextContainsValidation(sheet, range, text) {
-  const rule = SpreadsheetApp.newDataValidation()
+  var rule = SpreadsheetApp.newDataValidation()
     .requireTextContains(text)
     .setAllowInvalid(false)
     .setHelpText(`Must contain: ${text}`)
@@ -165,8 +165,8 @@ function clearValidation(sheet, range) {
  * @return {string} Column letter
  */
 function columnToLetter(column) {
-  let temp;
-  let letter = '';
+  var temp;
+  var letter = '';
   while (column > 0) {
     temp = (column - 1) % 26;
     letter = String.fromCharCode(temp + 65) + letter;

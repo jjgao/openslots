@@ -17,16 +17,16 @@ function onEditTrigger(e) {
       return;
     }
 
-    const sheet = e.range.getSheet();
-    const sheetName = sheet.getName();
+    var sheet = e.range.getSheet();
+    var sheetName = sheet.getName();
 
     // Only process Appointments sheet
     if (sheetName !== SHEETS.APPOINTMENTS) {
       return;
     }
 
-    const row = e.range.getRow();
-    const col = e.range.getColumn();
+    var row = e.range.getRow();
+    var col = e.range.getColumn();
 
     // Ignore header row
     if (row === 1) {
@@ -49,10 +49,10 @@ function onEditTrigger(e) {
  * @param {Object} e - Edit event
  */
 function handleAppointmentEdit(sheet, row, col, e) {
-  const columns = COLUMNS.APPOINTMENTS;
+  var columns = COLUMNS.APPOINTMENTS;
 
   // Check if this is a new row (editing required fields)
-  const isNewRow = isNewAppointmentRow(sheet, row);
+  var isNewRow = isNewAppointmentRow(sheet, row);
 
   if (isNewRow && hasRequiredAppointmentFields(sheet, row)) {
     // New appointment - validate and create calendar event
@@ -62,8 +62,8 @@ function handleAppointmentEdit(sheet, row, col, e) {
 
   // Handle status changes (column 9 = status)
   if (col === columns.STATUS + 1) {
-    const newStatus = e.value || sheet.getRange(row, col).getValue();
-    const appointmentId = sheet.getRange(row, 1).getValue();
+    var newStatus = e.value || sheet.getRange(row, col).getValue();
+    var appointmentId = sheet.getRange(row, 1).getValue();
 
     if (appointmentId && newStatus) {
       handleStatusChange(appointmentId, newStatus);
@@ -75,7 +75,7 @@ function handleAppointmentEdit(sheet, row, col, e) {
   if (col === columns.DATE + 1 ||
       col === columns.START_TIME + 1 ||
       col === columns.END_TIME + 1) {
-    const appointmentId = sheet.getRange(row, 1).getValue();
+    var appointmentId = sheet.getRange(row, 1).getValue();
     if (appointmentId) {
       updateCalendarEvent(appointmentId);
     }
@@ -90,8 +90,8 @@ function handleAppointmentEdit(sheet, row, col, e) {
  */
 function isNewAppointmentRow(sheet, row) {
   // Column A contains auto-generated ID - it's new if ID is empty but other data exists
-  const appointmentId = sheet.getRange(row, 1).getValue();
-  const clientId = sheet.getRange(row, 2).getValue();
+  var appointmentId = sheet.getRange(row, 1).getValue();
+  var clientId = sheet.getRange(row, 2).getValue();
 
   return !appointmentId && clientId;
 }
@@ -103,11 +103,11 @@ function isNewAppointmentRow(sheet, row) {
  * @returns {boolean} True if all required fields are filled
  */
 function hasRequiredAppointmentFields(sheet, row) {
-  const clientId = sheet.getRange(row, 2).getValue();
-  const providerId = sheet.getRange(row, 3).getValue();
-  const serviceId = sheet.getRange(row, 4).getValue();
-  const date = sheet.getRange(row, 5).getValue();
-  const startTime = sheet.getRange(row, 6).getValue();
+  var clientId = sheet.getRange(row, 2).getValue();
+  var providerId = sheet.getRange(row, 3).getValue();
+  var serviceId = sheet.getRange(row, 4).getValue();
+  var date = sheet.getRange(row, 5).getValue();
+  var startTime = sheet.getRange(row, 6).getValue();
 
   return clientId && providerId && serviceId && date && startTime;
 }
@@ -120,7 +120,7 @@ function hasRequiredAppointmentFields(sheet, row) {
 function processNewManualAppointment(sheet, row) {
   try {
     // Get all data from the row
-    const data = {
+    var data = {
       clientId: sheet.getRange(row, 2).getValue(),
       providerId: sheet.getRange(row, 3).getValue(),
       serviceId: sheet.getRange(row, 4).getValue(),
@@ -133,19 +133,19 @@ function processNewManualAppointment(sheet, row) {
     };
 
     // Validate entities exist
-    const client = getClient(data.clientId);
+    var client = getClient(data.clientId);
     if (!client) {
       showValidationError(sheet, row, `Client not found: ${data.clientId}`);
       return;
     }
 
-    const provider = getProvider(data.providerId);
+    var provider = getProvider(data.providerId);
     if (!provider) {
       showValidationError(sheet, row, `Provider not found: ${data.providerId}`);
       return;
     }
 
-    const service = getService(data.serviceId);
+    var service = getService(data.serviceId);
     if (!service) {
       showValidationError(sheet, row, `Service not found: ${data.serviceId}`);
       return;
@@ -153,8 +153,8 @@ function processNewManualAppointment(sheet, row) {
 
     // Calculate duration if not provided
     if (!data.duration && data.startTime && data.endTime) {
-      const startMinutes = parseTimeToMinutes(data.startTime);
-      const endMinutes = parseTimeToMinutes(data.endTime);
+      var startMinutes = parseTimeToMinutes(data.startTime);
+      var endMinutes = parseTimeToMinutes(data.endTime);
       data.duration = endMinutes - startMinutes;
       sheet.getRange(row, 8).setValue(data.duration);
     }
@@ -167,7 +167,7 @@ function processNewManualAppointment(sheet, row) {
 
     // Set default duration from service if not provided
     if (!data.duration) {
-      const defaultDuration = getDefaultDuration();
+      var defaultDuration = getDefaultDuration();
       data.duration = defaultDuration;
       sheet.getRange(row, 8).setValue(defaultDuration);
       data.endTime = calculateEndTime(data.startTime, defaultDuration);
@@ -175,7 +175,7 @@ function processNewManualAppointment(sheet, row) {
     }
 
     // Normalize date format
-    const normalizedDate = normalizeDate(data.date);
+    var normalizedDate = normalizeDate(data.date);
     sheet.getRange(row, 5).setValue(normalizedDate);
 
     // Set status if not provided
@@ -185,14 +185,14 @@ function processNewManualAppointment(sheet, row) {
     }
 
     // Set created date
-    const today = formatDateYMD(new Date());
+    var today = formatDateYMD(new Date());
     sheet.getRange(row, 10).setValue(today);
 
     // Force recalculation to generate appointment ID
     SpreadsheetApp.flush();
 
     // Get the generated ID
-    const appointmentId = sheet.getRange(row, 1).getValue();
+    var appointmentId = sheet.getRange(row, 1).getValue();
 
     if (!appointmentId) {
       Logger.log('Warning: Appointment ID not generated');
@@ -200,7 +200,7 @@ function processNewManualAppointment(sheet, row) {
     }
 
     // Check for conflicts (but allow the entry)
-    const hasConflict = hasAppointmentConflict(
+    var hasConflict = hasAppointmentConflict(
       data.providerId,
       normalizedDate,
       data.startTime,
@@ -213,7 +213,7 @@ function processNewManualAppointment(sheet, row) {
     }
 
     // Create calendar event
-    const calendarResult = createCalendarEvent(appointmentId);
+    var calendarResult = createCalendarEvent(appointmentId);
     if (calendarResult.success) {
       Logger.log(`Calendar event created for manual entry: ${appointmentId}`);
     } else {
@@ -262,7 +262,7 @@ function handleStatusChange(appointmentId, newStatus) {
  */
 function showValidationError(sheet, row, message) {
   // Set a note on the first cell with the error
-  const cell = sheet.getRange(row, 1);
+  var cell = sheet.getRange(row, 1);
   cell.setNote(`Error: ${message}`);
   cell.setBackground('#ffcdd2'); // Light red
 
@@ -282,8 +282,8 @@ function showValidationError(sheet, row, message) {
  * @param {string} message - Warning message
  */
 function showWarning(sheet, row, message) {
-  const cell = sheet.getRange(row, 1);
-  const existingNote = cell.getNote();
+  var cell = sheet.getRange(row, 1);
+  var existingNote = cell.getNote();
   cell.setNote(existingNote ? `${existingNote}\n${message}` : message);
   cell.setBackground('#fff9c4'); // Light yellow
 }
@@ -300,8 +300,8 @@ function formatTimeValue(value) {
   }
 
   if (value instanceof Date) {
-    const hours = String(value.getHours()).padStart(2, '0');
-    const minutes = String(value.getMinutes()).padStart(2, '0');
+    var hours = String(value.getHours()).padStart(2, '0');
+    var minutes = String(value.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
   }
 
@@ -314,8 +314,8 @@ function formatTimeValue(value) {
  */
 function setupOnEditTrigger() {
   // Remove any existing triggers first
-  const triggers = ScriptApp.getProjectTriggers();
-  for (let i = 0; i < triggers.length; i++) {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
     if (triggers[i].getHandlerFunction() === 'onEditTrigger') {
       ScriptApp.deleteTrigger(triggers[i]);
     }
@@ -344,10 +344,10 @@ function setupOnEditTrigger() {
  * Removes the onEdit trigger
  */
 function removeOnEditTrigger() {
-  const triggers = ScriptApp.getProjectTriggers();
-  let removed = 0;
+  var triggers = ScriptApp.getProjectTriggers();
+  var removed = 0;
 
-  for (let i = 0; i < triggers.length; i++) {
+  for (var i = 0; i < triggers.length; i++) {
     if (triggers[i].getHandlerFunction() === 'onEditTrigger') {
       ScriptApp.deleteTrigger(triggers[i]);
       removed++;

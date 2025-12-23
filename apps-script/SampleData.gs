@@ -9,8 +9,8 @@
  * Call this after running initializeSystem()
  */
 function addSampleData() {
-  const ui = SpreadsheetApp.getUi();
-  const response = ui.alert(
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.alert(
     'Add Sample Data?',
     'This will add test data to all sheets. Any existing data will remain.\n\nContinue?',
     ui.ButtonSet.YES_NO
@@ -69,7 +69,7 @@ function addSampleData() {
  * Adds sample providers
  */
 function addSampleProviders() {
-  const sampleData = [
+  var sampleData = [
     ['Dr. Sarah Johnson', 'sarah.johnson@example.com', '555-0101', 'SERV001,SERV002', 'Active'],
     ['Dr. Michael Chen', 'michael.chen@example.com', '555-0102', 'SERV001,SERV003,SERV004', 'Active'],
     ['Emma Williams', 'emma.williams@example.com', '555-0103', 'SERV002,SERV004,SERV005', 'Active'],
@@ -78,7 +78,7 @@ function addSampleProviders() {
   ];
 
   // Use addRow() to generate IDs automatically
-  for (let i = 0; i < sampleData.length; i++) {
+  for (var i = 0; i < sampleData.length; i++) {
     addRow('Providers', sampleData[i]);
   }
 
@@ -89,8 +89,8 @@ function addSampleProviders() {
  * Adds sample services
  */
 function addSampleServices() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Services');
-  const sampleData = [
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Services');
+  var sampleData = [
     ['Initial Consultation', '30|60', 'First-time client consultation'],
     ['Follow-up Appointment', '30', 'Follow-up visit for existing clients'],
     ['Standard Treatment', '60', 'Regular treatment session'],
@@ -100,7 +100,7 @@ function addSampleServices() {
     ['Annual Review', '60', 'Annual checkup and assessment']
   ];
 
-  for (let i = 0; i < sampleData.length; i++) {
+  for (var i = 0; i < sampleData.length; i++) {
     addRow('Services', sampleData[i]);
   }
 
@@ -111,9 +111,9 @@ function addSampleServices() {
  * Adds sample clients
  */
 function addSampleClients() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Clients');
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Clients');
   // Headers: client_id, name, phone, email, notes, first_visit_date, last_visit_date
-  const sampleData = [
+  var sampleData = [
     ['John Doe', '555-1001', 'john.doe@email.com', 'Prefers morning appointments', '', ''],
     ['Jane Smith', '555-1002', 'jane.smith@email.com', 'Allergic to latex', '', ''],
     ['Bob Wilson', '555-1003', '', 'No email provided', '', ''],
@@ -126,7 +126,7 @@ function addSampleClients() {
     ['Iris West', '555-1010', 'iris.west@email.com', 'Frequent no-shows in past', '', '']
   ];
 
-  for (let i = 0; i < sampleData.length; i++) {
+  for (var i = 0; i < sampleData.length; i++) {
     addRow(sheet.getName(), sampleData[i]);
   }
 
@@ -137,10 +137,10 @@ function addSampleClients() {
  * Adds sample provider availability (weekly schedules)
  */
 function addSampleProviderAvailability() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Provider_Availability');
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Provider_Availability');
 
   // Dr. Sarah Johnson (PROV001) - Mon-Fri 9-5
-  const drJohnson = [
+  var drJohnson = [
     ['PROV001', 'Monday', '09:00', '17:00', '', '', 'Yes'],
     ['PROV001', 'Tuesday', '09:00', '17:00', '', '', 'Yes'],
     ['PROV001', 'Wednesday', '09:00', '17:00', '', '', 'Yes'],
@@ -149,7 +149,7 @@ function addSampleProviderAvailability() {
   ];
 
   // Dr. Michael Chen (PROV002) - Mon-Thu 10-6, Fri 9-2
-  const drChen = [
+  var drChen = [
     ['PROV002', 'Monday', '10:00', '18:00', '', '', 'Yes'],
     ['PROV002', 'Tuesday', '10:00', '18:00', '', '', 'Yes'],
     ['PROV002', 'Wednesday', '10:00', '18:00', '', '', 'Yes'],
@@ -158,7 +158,7 @@ function addSampleProviderAvailability() {
   ];
 
   // Emma Williams (PROV003) - Tue-Sat 8-4
-  const emma = [
+  var emma = [
     ['PROV003', 'Tuesday', '08:00', '16:00', '', '', 'Yes'],
     ['PROV003', 'Wednesday', '08:00', '16:00', '', '', 'Yes'],
     ['PROV003', 'Thursday', '08:00', '16:00', '', '', 'Yes'],
@@ -167,7 +167,7 @@ function addSampleProviderAvailability() {
   ];
 
   // James Brown (PROV004) - Mon-Fri 11-7
-  const james = [
+  var james = [
     ['PROV004', 'Monday', '11:00', '19:00', '', '', 'Yes'],
     ['PROV004', 'Tuesday', '11:00', '19:00', '', '', 'Yes'],
     ['PROV004', 'Wednesday', '11:00', '19:00', '', '', 'Yes'],
@@ -175,9 +175,9 @@ function addSampleProviderAvailability() {
     ['PROV004', 'Friday', '11:00', '19:00', '', '', 'Yes']
   ];
 
-  const allSchedules = drJohnson.concat(drChen, emma, james);
+  var allSchedules = drJohnson.concat(drChen, emma, james);
 
-  for (let i = 0; i < allSchedules.length; i++) {
+  for (var i = 0; i < allSchedules.length; i++) {
     addRow(sheet.getName(), allSchedules[i]);
   }
 
@@ -188,25 +188,25 @@ function addSampleProviderAvailability() {
  * Adds sample provider exceptions (time off, vacations)
  */
 function addSampleProviderExceptions() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Provider_Exceptions');
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Provider_Exceptions');
 
-  const today = new Date();
-  const futureDate1 = new Date(today);
+  var today = new Date();
+  var futureDate1 = new Date(today);
   futureDate1.setDate(futureDate1.getDate() + 14);
 
-  const futureDate2 = new Date(today);
+  var futureDate2 = new Date(today);
   futureDate2.setDate(futureDate2.getDate() + 21);
 
-  const futureDate3 = new Date(today);
+  var futureDate3 = new Date(today);
   futureDate3.setDate(futureDate3.getDate() + 7);
 
-  const sampleData = [
+  var sampleData = [
     ['PROV001', formatDate(futureDate1), '00:00', '23:59', 'Vacation day'],
     ['PROV002', formatDate(futureDate2), '09:00', '12:00', 'Conference attendance - morning only'],
     ['PROV003', formatDate(futureDate3), '14:00', '16:00', 'Training session']
   ];
 
-  for (let i = 0; i < sampleData.length; i++) {
+  for (var i = 0; i < sampleData.length; i++) {
     addRow(sheet.getName(), sampleData[i]);
   }
 
@@ -217,28 +217,28 @@ function addSampleProviderExceptions() {
  * Adds sample appointments (mix of past, present, and future)
  */
 function addSampleAppointments() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Appointments');
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Appointments');
 
-  const today = new Date();
-  const yesterday = new Date(today);
+  var today = new Date();
+  var yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
 
-  const tomorrow = new Date(today);
+  var tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const nextWeek = new Date(today);
+  var nextWeek = new Date(today);
   nextWeek.setDate(nextWeek.getDate() + 7);
 
-  const pastDate1 = new Date(today);
+  var pastDate1 = new Date(today);
   pastDate1.setDate(pastDate1.getDate() - 3);
 
-  const pastDate2 = new Date(today);
+  var pastDate2 = new Date(today);
   pastDate2.setDate(pastDate2.getDate() - 7);
 
-  const futureDate = new Date(today);
+  var futureDate = new Date(today);
   futureDate.setDate(futureDate.getDate() + 14);
 
-  const sampleData = [
+  var sampleData = [
     // Today's appointments
     ['CLI001', 'PROV001', 'SERV001', formatDate(today), '09:00', '10:00', 60, 'Booked', formatDate(today), 'First appointment', ''],
     ['CLI002', 'PROV001', 'SERV002', formatDate(today), '10:30', '11:00', 30, 'Confirmed', formatDate(yesterday), 'Follow-up from last month', ''],
@@ -273,7 +273,7 @@ function addSampleAppointments() {
     ['CLI008', 'PROV003', 'SERV002', formatDate(futureDate), '15:00', '15:30', 30, 'Booked', formatDate(today), '', '']
   ];
 
-  for (let i = 0; i < sampleData.length; i++) {
+  for (var i = 0; i < sampleData.length; i++) {
     addRow(sheet.getName(), sampleData[i]);
   }
 
@@ -284,22 +284,22 @@ function addSampleAppointments() {
  * Adds sample activity log entries
  */
 function addSampleActivityLog() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Activity_Log');
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Activity_Log');
 
-  const now = new Date();
-  const timestamp1 = formatDateTime(now);
+  var now = new Date();
+  var timestamp1 = formatDateTime(now);
 
-  const earlier1 = new Date(now.getTime() - 3600000); // 1 hour ago
-  const timestamp2 = formatDateTime(earlier1);
+  var earlier1 = new Date(now.getTime() - 3600000); // 1 hour ago
+  var timestamp2 = formatDateTime(earlier1);
 
-  const earlier2 = new Date(now.getTime() - 7200000); // 2 hours ago
-  const timestamp3 = formatDateTime(earlier2);
+  var earlier2 = new Date(now.getTime() - 7200000); // 2 hours ago
+  var timestamp3 = formatDateTime(earlier2);
 
-  const yesterday = new Date(now);
+  var yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
-  const timestamp4 = formatDateTime(yesterday);
+  var timestamp4 = formatDateTime(yesterday);
 
-  const sampleData = [
+  var sampleData = [
     [timestamp1, 'check-in', 'APT003', 'CLI003', 'PROV002', 'receptionist@example.com', 'Booked', 'Checked-in', 'Client arrived at 13:55'],
     [timestamp2, 'confirmation-call', 'APT002', 'CLI002', 'PROV001', 'receptionist@example.com', '', 'Confirmed', 'Client confirmed via phone'],
     [timestamp3, 'book', 'APT001', 'CLI001', 'PROV001', 'receptionist@example.com', '', 'Booked', 'New appointment created'],
@@ -307,7 +307,7 @@ function addSampleActivityLog() {
     [timestamp4, 'no-show', 'APT012', 'CLI010', 'PROV001', 'receptionist@example.com', 'Booked', 'No-show', 'Client did not arrive or call']
   ];
 
-  for (let i = 0; i < sampleData.length; i++) {
+  for (var i = 0; i < sampleData.length; i++) {
     addRow(sheet.getName(), sampleData[i]);
   }
 
@@ -318,13 +318,13 @@ function addSampleActivityLog() {
  * Adds sample confirmation tracking entries
  */
 function addSampleConfirmationTracking() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Confirmation_Tracking');
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Confirmation_Tracking');
 
-  const today = new Date();
-  const yesterday = new Date(today);
+  var today = new Date();
+  var yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
 
-  const sampleData = [
+  var sampleData = [
     ['APT002', formatDate(yesterday), 'Call', 'Confirmed', 'Client confirmed appointment for today'],
     ['APT004', formatDate(yesterday), 'Text', 'Confirmed', 'SMS confirmation received'],
     ['APT005', formatDate(today), 'Call', 'Confirmed', 'Confirmed for tomorrow'],
@@ -332,7 +332,7 @@ function addSampleConfirmationTracking() {
     ['APT007', formatDate(today), 'Call', 'Confirmed', 'Confirmed for next week']
   ];
 
-  for (let i = 0; i < sampleData.length; i++) {
+  for (var i = 0; i < sampleData.length; i++) {
     addRow(sheet.getName(), sampleData[i]);
   }
 
@@ -361,8 +361,8 @@ function formatDateTime(date) {
  * Clears all data from sheets (keeps structure and headers)
  */
 function clearAllData() {
-  const ui = SpreadsheetApp.getUi();
-  const response = ui.alert(
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.alert(
     'Clear All Data?',
     'This will delete all data from all sheets (keeping structure and headers).\n\nThis cannot be undone!\n\nContinue?',
     ui.ButtonSet.YES_NO
@@ -373,17 +373,17 @@ function clearAllData() {
     return;
   }
 
-  const sheetNames = [
+  var sheetNames = [
     'Providers', 'Services', 'Clients', 'Appointments',
     'Provider_Availability', 'Provider_Exceptions',
     'Activity_Log', 'Confirmation_Tracking',
     'Business_Holidays', 'Business_Exceptions'
   ];
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   sheetNames.forEach(name => {
-    const sheet = ss.getSheetByName(name);
+    var sheet = ss.getSheetByName(name);
     if (sheet && sheet.getLastRow() > 1) {
       sheet.deleteRows(2, sheet.getLastRow() - 1);
       Logger.log('Cleared data from: ' + name);
@@ -398,10 +398,10 @@ function clearAllData() {
  * Adds sample business holidays
  */
 function addSampleBusinessHolidays() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Business_Holidays');
-  const today = new Date();
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Business_Holidays');
+  var today = new Date();
 
-  const sampleData = [
+  var sampleData = [
     // Recurring holidays
     [formatDate(new Date(today.getFullYear(), 0, 1)), 'New Year\'s Day', 'Yes', 'Office closed for New Year'],
     [formatDate(new Date(today.getFullYear(), 11, 25)), 'Christmas Day', 'Yes', 'Office closed for Christmas'],
@@ -413,7 +413,7 @@ function addSampleBusinessHolidays() {
     [formatDate(new Date(today.getFullYear() + 1, 2, 15)), 'Staff Training Day', 'No', 'All-day training workshop']
   ];
 
-  for (let i = 0; i < sampleData.length; i++) {
+  for (var i = 0; i < sampleData.length; i++) {
     addRow(sheet.getName(), sampleData[i]);
   }
 
@@ -424,13 +424,13 @@ function addSampleBusinessHolidays() {
  * Adds sample business exceptions (partial day closures)
  */
 function addSampleBusinessExceptions() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Business_Exceptions');
-  const today = new Date();
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Business_Exceptions');
+  var today = new Date();
 
   // Get next month dates
-  const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  var nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
 
-  const sampleData = [
+  var sampleData = [
     // Meetings and events
     [formatDate(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 5)), '10:00', '12:00', 'All-Staff Meeting', 'Monthly team meeting - no appointments'],
     [formatDate(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 15)), '14:00', '17:00', 'Building Maintenance', 'HVAC system inspection'],
@@ -438,7 +438,7 @@ function addSampleBusinessExceptions() {
     [formatDate(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 25)), '13:00', '14:30', 'Safety Training', 'Mandatory fire safety drill']
   ];
 
-  for (let i = 0; i < sampleData.length; i++) {
+  for (var i = 0; i < sampleData.length; i++) {
     addRow(sheet.getName(), sampleData[i]);
   }
 
@@ -449,9 +449,9 @@ function addSampleBusinessExceptions() {
  * Adds sample system configuration settings
  */
 function addSampleSystemConfig() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('System_Config');
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('System_Config');
 
-  const sampleData = [
+  var sampleData = [
     ['business_name', 'OpenSlots Appointment Center'],
     ['business_hours_start', '09:00'],
     ['business_hours_end', '17:00'],
@@ -466,7 +466,7 @@ function addSampleSystemConfig() {
     ['late_arrival_threshold_minutes', '15']
   ];
 
-  for (let i = 0; i < sampleData.length; i++) {
+  for (var i = 0; i < sampleData.length; i++) {
     sheet.getRange(i + 2, 1, 1, sampleData[i].length).setValues([sampleData[i]]);
   }
 

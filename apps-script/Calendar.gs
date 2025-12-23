@@ -10,7 +10,7 @@
  * These are the actual hex values Google Calendar uses
  * @const {Object}
  */
-const CALENDAR_COLORS = {
+var CALENDAR_COLORS = {
   LAVENDER: '#9fc6e7',    // Light blue
   SAGE: '#42d692',        // Light green
   GRAPE: '#9e69af',       // Purple
@@ -28,7 +28,7 @@ const CALENDAR_COLORS = {
  * Status to color mapping (legacy, now using provider colors)
  * @const {Object}
  */
-const STATUS_COLORS = {
+var STATUS_COLORS = {
   'Booked': CALENDAR_COLORS.BLUEBERRY,
   'Confirmed': CALENDAR_COLORS.BASIL,
   'Checked-in': CALENDAR_COLORS.BANANA,
@@ -42,7 +42,7 @@ const STATUS_COLORS = {
  * Available colors for provider assignment (cycling through these)
  * @const {Array}
  */
-const PROVIDER_COLOR_PALETTE = [
+var PROVIDER_COLOR_PALETTE = [
   CALENDAR_COLORS.BLUEBERRY,  // Blue
   CALENDAR_COLORS.BASIL,      // Green
   CALENDAR_COLORS.FLAMINGO,   // Pink
@@ -184,34 +184,34 @@ function updateAllProviderCalendarColors() {
 function createCalendarEvent(appointmentId) {
   try {
     // Get appointment details
-    const appointment = getAppointment(appointmentId);
+    var appointment = getAppointment(appointmentId);
     if (!appointment) {
       return { success: false, error: 'Appointment not found' };
     }
 
     // Get related records
-    const client = getClient(appointment.client_id);
-    const provider = getProvider(appointment.provider_id);
-    const service = getService(appointment.service_id);
+    var client = getClient(appointment.client_id);
+    var provider = getProvider(appointment.provider_id);
+    var service = getService(appointment.service_id);
 
     if (!client || !provider || !service) {
       return { success: false, error: 'Related records not found (client, provider, or service)' };
     }
 
     // Get or create calendar for provider
-    const calendar = getOrCreateProviderCalendar(provider);
+    var calendar = getOrCreateProviderCalendar(provider);
     if (!calendar) {
       return { success: false, error: 'Could not access or create provider calendar' };
     }
 
     // Build event details
-    const eventTitle = buildEventTitle(service.service_name, client.name);
-    const eventDescription = buildEventDescription(appointment, client, service);
-    const startTime = combineDateAndTime(appointment.appointment_date, appointment.start_time);
-    const endTime = combineDateAndTime(appointment.appointment_date, appointment.end_time);
+    var eventTitle = buildEventTitle(service.service_name, client.name);
+    var eventDescription = buildEventDescription(appointment, client, service);
+    var startTime = combineDateAndTime(appointment.appointment_date, appointment.start_time);
+    var endTime = combineDateAndTime(appointment.appointment_date, appointment.end_time);
 
     // Create the event
-    const event = calendar.createEvent(eventTitle, startTime, endTime, {
+    var event = calendar.createEvent(eventTitle, startTime, endTime, {
       description: eventDescription,
       location: getConfig('business_name', 'Office')
     });
@@ -219,7 +219,7 @@ function createCalendarEvent(appointmentId) {
     // Event color is inherited from calendar color (no need to set individually)
 
     // Store event ID in appointment
-    const eventId = event.getId();
+    var eventId = event.getId();
     updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
       calendar_event_id: eventId
     });
@@ -249,7 +249,7 @@ function createCalendarEvent(appointmentId) {
 function updateCalendarEvent(appointmentId) {
   try {
     // Get appointment details
-    const appointment = getAppointment(appointmentId);
+    var appointment = getAppointment(appointmentId);
     if (!appointment) {
       return { success: false, error: 'Appointment not found' };
     }
@@ -260,21 +260,21 @@ function updateCalendarEvent(appointmentId) {
     }
 
     // Get related records
-    const client = getClient(appointment.client_id);
-    const provider = getProvider(appointment.provider_id);
-    const service = getService(appointment.service_id);
+    var client = getClient(appointment.client_id);
+    var provider = getProvider(appointment.provider_id);
+    var service = getService(appointment.service_id);
 
     if (!client || !provider || !service) {
       return { success: false, error: 'Related records not found' };
     }
 
     // Get the calendar and event
-    const calendar = getOrCreateProviderCalendar(provider);
+    var calendar = getOrCreateProviderCalendar(provider);
     if (!calendar) {
       return { success: false, error: 'Could not access provider calendar' };
     }
 
-    const event = calendar.getEventById(appointment.calendar_event_id);
+    var event = calendar.getEventById(appointment.calendar_event_id);
     if (!event) {
       // Event was deleted externally, create a new one
       Logger.log('Calendar event not found, creating new one');
@@ -282,10 +282,10 @@ function updateCalendarEvent(appointmentId) {
     }
 
     // Update event details
-    const eventTitle = buildEventTitle(service.service_name, client.name);
-    const eventDescription = buildEventDescription(appointment, client, service);
-    const startTime = combineDateAndTime(appointment.appointment_date, appointment.start_time);
-    const endTime = combineDateAndTime(appointment.appointment_date, appointment.end_time);
+    var eventTitle = buildEventTitle(service.service_name, client.name);
+    var eventDescription = buildEventDescription(appointment, client, service);
+    var startTime = combineDateAndTime(appointment.appointment_date, appointment.start_time);
+    var endTime = combineDateAndTime(appointment.appointment_date, appointment.end_time);
 
     event.setTitle(eventTitle);
     event.setDescription(eventDescription);
@@ -314,7 +314,7 @@ function updateCalendarEvent(appointmentId) {
 function deleteCalendarEvent(appointmentId) {
   try {
     // Get appointment details
-    const appointment = getAppointment(appointmentId);
+    var appointment = getAppointment(appointmentId);
     if (!appointment) {
       return { success: false, error: 'Appointment not found' };
     }
@@ -324,21 +324,21 @@ function deleteCalendarEvent(appointmentId) {
     }
 
     // Get provider to access their calendar
-    const provider = getProvider(appointment.provider_id);
+    var provider = getProvider(appointment.provider_id);
     if (!provider) {
       return { success: false, error: 'Provider not found' };
     }
 
     // Get the calendar
-    const calendar = getOrCreateProviderCalendar(provider);
+    var calendar = getOrCreateProviderCalendar(provider);
     if (!calendar) {
       return { success: false, error: 'Could not access provider calendar' };
     }
 
     // Find and delete the event
-    const event = calendar.getEventById(appointment.calendar_event_id);
+    var event = calendar.getEventById(appointment.calendar_event_id);
     if (event) {
-      const eventId = appointment.calendar_event_id;
+      var eventId = appointment.calendar_event_id;
       event.deleteEvent();
 
       // Clear the event ID from appointment
@@ -372,7 +372,7 @@ function getOrCreateProviderCalendar(provider) {
   try {
     // Check if provider already has a calendar ID stored
     if (provider.calendar_id) {
-      const existingCalendar = CalendarApp.getCalendarById(provider.calendar_id);
+      var existingCalendar = CalendarApp.getCalendarById(provider.calendar_id);
       if (existingCalendar) {
         // Set calendar color using Calendar API
         setCalendarColor(provider.calendar_id, provider.provider_id);
@@ -383,14 +383,14 @@ function getOrCreateProviderCalendar(provider) {
     }
 
     // Create a dedicated calendar for this provider
-    const calendarName = `OpenSlots - ${provider.name}`;
+    var calendarName = `OpenSlots - ${provider.name}`;
 
     // Check if calendar with this name already exists
-    const allCalendars = CalendarApp.getAllCalendars();
-    for (let i = 0; i < allCalendars.length; i++) {
+    var allCalendars = CalendarApp.getAllCalendars();
+    for (var i = 0; i < allCalendars.length; i++) {
       if (allCalendars[i].getName() === calendarName) {
         // Found existing calendar, store the ID and set color
-        const calId = allCalendars[i].getId();
+        var calId = allCalendars[i].getId();
         setCalendarColor(calId, provider.provider_id);
 
         updateRecordById(SHEETS.PROVIDERS, provider.provider_id, {
@@ -402,13 +402,13 @@ function getOrCreateProviderCalendar(provider) {
     }
 
     // Create new calendar
-    const newCalendar = CalendarApp.createCalendar(calendarName, {
+    var newCalendar = CalendarApp.createCalendar(calendarName, {
       summary: `Appointments for ${provider.name}`,
       timeZone: Session.getScriptTimeZone()
     });
 
     // Store the calendar ID in the provider record
-    const newCalId = newCalendar.getId();
+    var newCalId = newCalendar.getId();
     updateRecordById(SHEETS.PROVIDERS, provider.provider_id, {
       calendar_id: newCalId
     });
@@ -435,29 +435,29 @@ function getOrCreateProviderCalendar(provider) {
  */
 function clearProviderCalendarEvents(providerId) {
   try {
-    const provider = getProvider(providerId);
+    var provider = getProvider(providerId);
     if (!provider || !provider.calendar_id) {
       return { success: true, deleted: 0 };
     }
 
-    const calendar = CalendarApp.getCalendarById(provider.calendar_id);
+    var calendar = CalendarApp.getCalendarById(provider.calendar_id);
     if (!calendar) {
       return { success: true, deleted: 0 };
     }
 
     // Get all events from today onwards
-    const startDate = new Date();
+    var startDate = new Date();
     startDate.setHours(0, 0, 0, 0);
 
-    const endDate = new Date();
+    var endDate = new Date();
     endDate.setFullYear(endDate.getFullYear() + 1); // Look ahead 1 year
 
-    const events = calendar.getEvents(startDate, endDate);
-    let deleted = 0;
+    var events = calendar.getEvents(startDate, endDate);
+    var deleted = 0;
 
-    for (let i = 0; i < events.length; i++) {
+    for (var i = 0; i < events.length; i++) {
       // Only delete OpenSlots events (check description)
-      const desc = events[i].getDescription() || '';
+      var desc = events[i].getDescription() || '';
       if (desc.includes('Managed by OpenSlots') || desc.includes('Appointment ID:')) {
         events[i].deleteEvent();
         deleted++;
@@ -482,7 +482,7 @@ function clearProviderCalendarEvents(providerId) {
  */
 function deleteProviderCalendar(providerId) {
   try {
-    const provider = getProvider(providerId);
+    var provider = getProvider(providerId);
     if (!provider || !provider.calendar_id) {
       return { success: true, message: 'No calendar to delete' };
     }
@@ -516,13 +516,13 @@ function deleteProviderCalendar(providerId) {
  * @returns {Object} Result with count of deleted calendars
  */
 function deleteAllProviderCalendars() {
-  const providers = getProviders();
-  let deleted = 0;
-  let failed = 0;
+  var providers = getProviders();
+  var deleted = 0;
+  var failed = 0;
 
-  for (let i = 0; i < providers.length; i++) {
+  for (var i = 0; i < providers.length; i++) {
     if (providers[i].calendar_id) {
-      const result = deleteProviderCalendar(providers[i].provider_id);
+      var result = deleteProviderCalendar(providers[i].provider_id);
       if (result.success) {
         deleted++;
       } else {
@@ -553,7 +553,7 @@ function buildEventTitle(serviceName, clientName) {
  * @returns {string} Event description
  */
 function buildEventDescription(appointment, client, service) {
-  const lines = [];
+  var lines = [];
 
   lines.push(`Client: ${client.name}`);
 
@@ -604,20 +604,20 @@ function syncCalendarEventColor(appointmentId, newStatus) {
  */
 function getProviderCalendarEvents(providerId, date) {
   try {
-    const provider = getProvider(providerId);
+    var provider = getProvider(providerId);
     if (!provider) {
       return [];
     }
 
-    const calendar = getOrCreateProviderCalendar(provider);
+    var calendar = getOrCreateProviderCalendar(provider);
     if (!calendar) {
       return [];
     }
 
-    const startOfDay = typeof date === 'string' ? parseDateInTimezone(date) : new Date(date);
+    var startOfDay = typeof date === 'string' ? parseDateInTimezone(date) : new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
 
-    const endOfDay = typeof date === 'string' ? parseDateInTimezone(date) : new Date(date);
+    var endOfDay = typeof date === 'string' ? parseDateInTimezone(date) : new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
     return calendar.getEvents(startOfDay, endOfDay);
@@ -634,13 +634,13 @@ function getProviderCalendarEvents(providerId, date) {
  * @returns {Object} Result with counts
  */
 function syncAllMissingCalendarEvents() {
-  const appointments = getAppointments();
-  let created = 0;
-  let failed = 0;
-  let skipped = 0;
+  var appointments = getAppointments();
+  var created = 0;
+  var failed = 0;
+  var skipped = 0;
 
-  for (let i = 0; i < appointments.length; i++) {
-    const apt = appointments[i];
+  for (var i = 0; i < appointments.length; i++) {
+    var apt = appointments[i];
 
     // Skip if already has calendar event or is cancelled/no-show
     if (apt.calendar_event_id ||
@@ -656,7 +656,7 @@ function syncAllMissingCalendarEvents() {
       continue;
     }
 
-    const result = createCalendarEvent(apt.appointment_id);
+    var result = createCalendarEvent(apt.appointment_id);
     if (result.success) {
       created++;
     } else {

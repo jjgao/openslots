@@ -15,7 +15,7 @@
  * Creates custom menu when spreadsheet opens
  */
 function onOpen() {
-  const ui = SpreadsheetApp.getUi();
+  var ui = SpreadsheetApp.getUi();
   ui.createMenu('Appointment System')
     .addItem('Initialize System', 'initializeSystem')
     .addItem('Add Sample Data', 'addSampleData')
@@ -49,7 +49,7 @@ function onOpen() {
  * Shows information about the system
  */
 function showAbout() {
-  const ui = SpreadsheetApp.getUi();
+  var ui = SpreadsheetApp.getUi();
   ui.alert(
     'Appointment Booking System',
     'Version: MVP 3.0 - Booking UI & Client Management\n\n' +
@@ -75,10 +75,10 @@ function showAbout() {
  * Creates all sheets and configures the system
  */
 function initializeSystem() {
-  const ui = SpreadsheetApp.getUi();
+  var ui = SpreadsheetApp.getUi();
 
   // Confirm with user
-  const response = ui.alert(
+  var response = ui.alert(
     'Initialize System',
     'This will create all system sheets. Any existing sheets with the same names will be deleted.\n\nContinue?',
     ui.ButtonSet.YES_NO
@@ -142,17 +142,17 @@ function initializeSystem() {
  * Creates the Providers sheet
  */
 function createProvidersSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = 'Providers';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = 'Providers';
 
   // Delete existing sheet if present
   deleteSheetIfExists(sheetName);
 
   // Create new sheet
-  const sheet = ss.insertSheet(sheetName);
+  var sheet = ss.insertSheet(sheetName);
 
   // Add headers
-  const headers = ['provider_id', 'name', 'email', 'phone', 'services_offered', 'active_status', 'calendar_id'];
+  var headers = ['provider_id', 'name', 'email', 'phone', 'services_offered', 'active_status', 'calendar_id'];
   sheet.appendRow(headers);
 
   // Format header row
@@ -181,13 +181,13 @@ function createProvidersSheet() {
  * Creates the Services sheet
  */
 function createServicesSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = 'Services';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = 'Services';
 
   deleteSheetIfExists(sheetName);
-  const sheet = ss.insertSheet(sheetName);
+  var sheet = ss.insertSheet(sheetName);
 
-  const headers = ['service_id', 'service_name', 'default_duration_options', 'description'];
+  var headers = ['service_id', 'service_name', 'default_duration_options', 'description'];
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
@@ -208,13 +208,13 @@ function createServicesSheet() {
  * Creates the Clients sheet
  */
 function createClientsSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = 'Clients';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = 'Clients';
 
   deleteSheetIfExists(sheetName);
-  const sheet = ss.insertSheet(sheetName);
+  var sheet = ss.insertSheet(sheetName);
 
-  const headers = ['client_id', 'name', 'phone', 'email', 'notes', 'first_visit_date', 'last_visit_date'];
+  var headers = ['client_id', 'name', 'phone', 'email', 'notes', 'first_visit_date', 'last_visit_date'];
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
@@ -241,13 +241,13 @@ function createClientsSheet() {
  * Creates the Appointments sheet
  */
 function createAppointmentsSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = 'Appointments';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = 'Appointments';
 
   deleteSheetIfExists(sheetName);
-  const sheet = ss.insertSheet(sheetName);
+  var sheet = ss.insertSheet(sheetName);
 
-  const headers = [
+  var headers = [
     'appointment_id', 'client_id', 'provider_id', 'service_id',
     'appointment_date', 'start_time', 'end_time', 'duration',
     'status', 'created_date', 'notes', 'calendar_event_id'
@@ -287,13 +287,13 @@ function createAppointmentsSheet() {
  * Creates the Provider_Availability sheet
  */
 function createProviderAvailabilitySheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = 'Provider_Availability';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = 'Provider_Availability';
 
   deleteSheetIfExists(sheetName);
-  const sheet = ss.insertSheet(sheetName);
+  var sheet = ss.insertSheet(sheetName);
 
-  const headers = [
+  var headers = [
     'availability_id', 'provider_id', 'day_of_week', 'start_time', 'end_time',
     'effective_date_start', 'effective_date_end', 'is_recurring'
   ];
@@ -328,13 +328,13 @@ function createProviderAvailabilitySheet() {
  * Creates the Provider_Exceptions sheet
  */
 function createProviderExceptionsSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = 'Provider_Exceptions';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = 'Provider_Exceptions';
 
   deleteSheetIfExists(sheetName);
-  const sheet = ss.insertSheet(sheetName);
+  var sheet = ss.insertSheet(sheetName);
 
-  const headers = ['exception_id', 'provider_id', 'exception_date', 'start_time', 'end_time', 'reason'];
+  var headers = ['exception_id', 'provider_id', 'exception_date', 'start_time', 'end_time', 'reason'];
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
@@ -359,13 +359,13 @@ function createProviderExceptionsSheet() {
  * Creates the Activity_Log sheet
  */
 function createActivityLogSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = 'Activity_Log';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = 'Activity_Log';
 
   deleteSheetIfExists(sheetName);
-  const sheet = ss.insertSheet(sheetName);
+  var sheet = ss.insertSheet(sheetName);
 
-  const headers = [
+  var headers = [
     'log_id', 'timestamp', 'action_type', 'appointment_id', 'client_id',
     'provider_id', 'user', 'previous_value', 'new_value', 'notes'
   ];
@@ -397,13 +397,13 @@ function createActivityLogSheet() {
  * Creates the Confirmation_Tracking sheet
  */
 function createConfirmationTrackingSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = 'Confirmation_Tracking';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = 'Confirmation_Tracking';
 
   deleteSheetIfExists(sheetName);
-  const sheet = ss.insertSheet(sheetName);
+  var sheet = ss.insertSheet(sheetName);
 
-  const headers = ['confirmation_id', 'appointment_id', 'confirmation_date', 'method', 'status', 'notes'];
+  var headers = ['confirmation_id', 'appointment_id', 'confirmation_date', 'method', 'status', 'notes'];
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
@@ -428,13 +428,13 @@ function createConfirmationTrackingSheet() {
  * Creates the System_Config sheet
  */
 function createSystemConfigSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = 'System_Config';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = 'System_Config';
 
   deleteSheetIfExists(sheetName);
-  const sheet = ss.insertSheet(sheetName);
+  var sheet = ss.insertSheet(sheetName);
 
-  const headers = ['setting_name', 'setting_value'];
+  var headers = ['setting_name', 'setting_value'];
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
@@ -450,8 +450,8 @@ function createSystemConfigSheet() {
  * @param {string} sheetName - Name of the sheet to delete
  */
 function deleteSheetIfExists(sheetName) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(sheetName);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName);
   if (sheet) {
     ss.deleteSheet(sheet);
     Logger.log('Deleted existing sheet: ' + sheetName);
@@ -464,7 +464,7 @@ function deleteSheetIfExists(sheetName) {
  * @param {number} numColumns - Number of columns in header
  */
 function formatHeaderRow(sheet, numColumns) {
-  const headerRange = sheet.getRange(1, 1, 1, numColumns);
+  var headerRange = sheet.getRange(1, 1, 1, numColumns);
   headerRange
     .setFontWeight('bold')
     .setBackground('#4285f4')
@@ -482,13 +482,13 @@ function formatHeaderRow(sheet, numColumns) {
  * Creates the Business_Holidays sheet
  */
 function createBusinessHolidaysSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = 'Business_Holidays';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = 'Business_Holidays';
 
   deleteSheetIfExists(sheetName);
-  const sheet = ss.insertSheet(sheetName);
+  var sheet = ss.insertSheet(sheetName);
 
-  const headers = ['holiday_id', 'date', 'name', 'recurring', 'notes'];
+  var headers = ['holiday_id', 'date', 'name', 'recurring', 'notes'];
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
@@ -514,13 +514,13 @@ function createBusinessHolidaysSheet() {
  * Creates the Business_Exceptions sheet
  */
 function createBusinessExceptionsSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = 'Business_Exceptions';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = 'Business_Exceptions';
 
   deleteSheetIfExists(sheetName);
-  const sheet = ss.insertSheet(sheetName);
+  var sheet = ss.insertSheet(sheetName);
 
-  const headers = ['exception_id', 'date', 'start_time', 'end_time', 'reason', 'notes'];
+  var headers = ['exception_id', 'date', 'start_time', 'end_time', 'reason', 'notes'];
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
@@ -548,8 +548,8 @@ function createBusinessExceptionsSheet() {
  * Helper function: Deletes the default Sheet1 if it exists and is empty
  */
 function deleteDefaultSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName('Sheet1');
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Sheet1');
 
   // Only delete if it exists and has no data (just 1 row)
   if (sheet && sheet.getLastRow() <= 1 && ss.getSheets().length > 1) {

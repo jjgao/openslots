@@ -14,7 +14,7 @@
  * Defines which status changes are allowed
  * @const {Object}
  */
-const VALID_STATUS_TRANSITIONS = {
+var VALID_STATUS_TRANSITIONS = {
   'Booked': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show', 'Confirmed'],
   'Confirmed': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show'],
   'Checked-in': ['Completed', 'No-show'],
@@ -39,13 +39,13 @@ function cancelAppointment(appointmentId, reason, cancelledBy) {
     }
 
     // Get appointment
-    const appointment = getAppointmentById(appointmentId);
+    var appointment = getAppointmentById(appointmentId);
     if (!appointment) {
       return { success: false, message: `Appointment ${appointmentId} not found` };
     }
 
     // Check if cancellation is allowed
-    const currentStatus = appointment.status;
+    var currentStatus = appointment.status;
     if (!canTransitionTo(currentStatus, 'Cancelled')) {
       return {
         success: false,
@@ -54,7 +54,7 @@ function cancelAppointment(appointmentId, reason, cancelledBy) {
     }
 
     // Update appointment status
-    const updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
+    var updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
       status: 'Cancelled',
       cancelled_at: getCurrentTimestamp(),
       cancelled_by: cancelledBy || Session.getActiveUser().getEmail(),
@@ -67,7 +67,7 @@ function cancelAppointment(appointmentId, reason, cancelledBy) {
 
     // Delete calendar event
     if (appointment.calendar_event_id) {
-      const calendarResult = deleteCalendarEvent(appointment);
+      var calendarResult = deleteCalendarEvent(appointmentId);
       if (calendarResult.success) {
         logCalendarDelete(appointmentId, appointment.calendar_event_id, 'Event deleted due to cancellation');
       }
@@ -126,13 +126,13 @@ function rescheduleAppointment(appointmentId, options) {
     }
 
     // Get appointment
-    const appointment = getAppointmentById(appointmentId);
+    var appointment = getAppointmentById(appointmentId);
     if (!appointment) {
       return { success: false, message: `Appointment ${appointmentId} not found` };
     }
 
     // Check if rescheduling is allowed
-    const currentStatus = appointment.status;
+    var currentStatus = appointment.status;
     if (!canTransitionTo(currentStatus, 'Rescheduled')) {
       return {
         success: false,
@@ -141,12 +141,12 @@ function rescheduleAppointment(appointmentId, options) {
     }
 
     // Prepare update data
-    const updates = {
+    var updates = {
       status: 'Rescheduled'
     };
 
     // Build before/after for logging
-    const before = {
+    var before = {
       date: appointment.appointment_date,
       start_time: appointment.start_time,
       provider_id: appointment.provider_id,
@@ -154,7 +154,14 @@ function rescheduleAppointment(appointmentId, options) {
       duration: appointment.duration
     };
 
-    const after = { ...before };
+    // ES5-compatible object copy
+    var after = {
+      date: before.date,
+      start_time: before.start_time,
+      provider_id: before.provider_id,
+      service_id: before.service_id,
+      duration: before.duration
+    };
 
     // Apply changes
     if (options.newDate) {
@@ -169,12 +176,12 @@ function rescheduleAppointment(appointmentId, options) {
 
     if (options.newProviderId) {
       // Validate provider exists and offers the service
-      const provider = getProvider(options.newProviderId);
+      var provider = getProvider(options.newProviderId);
       if (!provider) {
         return { success: false, message: `Provider ${options.newProviderId} not found` };
       }
 
-      const serviceId = options.newServiceId || appointment.service_id;
+      var serviceId = options.newServiceId || appointment.service_id;
       if (!providerOffersService(options.newProviderId, serviceId)) {
         return { success: false, message: 'Provider does not offer this service' };
       }
@@ -184,7 +191,7 @@ function rescheduleAppointment(appointmentId, options) {
     }
 
     if (options.newServiceId) {
-      const service = getService(options.newServiceId);
+      var service = getService(options.newServiceId);
       if (!service) {
         return { success: false, message: `Service ${options.newServiceId} not found` };
       }
@@ -200,12 +207,12 @@ function rescheduleAppointment(appointmentId, options) {
 
     // Check availability of new slot if time/date/provider changed
     if (options.newDate || options.newStartTime || options.newProviderId) {
-      const checkDate = options.newDate || appointment.appointment_date;
-      const checkTime = options.newStartTime || appointment.start_time;
-      const checkProvider = options.newProviderId || appointment.provider_id;
-      const checkDuration = options.newDuration || appointment.duration;
+      var checkDate = options.newDate || appointment.appointment_date;
+      var checkTime = options.newStartTime || appointment.start_time;
+      var checkProvider = options.newProviderId || appointment.provider_id;
+      var checkDuration = options.newDuration || appointment.duration;
 
-      const available = isSlotAvailable(
+      var available = isSlotAvailable(
         checkProvider,
         checkDate,
         checkTime,
@@ -222,15 +229,14 @@ function rescheduleAppointment(appointmentId, options) {
     }
 
     // Update appointment record
-    const updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, updates);
+    var updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, updates);
     if (!updated) {
       return { success: false, message: 'Failed to update appointment' };
     }
 
     // Update calendar event
     if (appointment.calendar_event_id) {
-      const updatedAppointment = { ...appointment, ...updates };
-      const calendarResult = updateCalendarEvent(updatedAppointment);
+      var calendarResult = updateCalendarEvent(appointmentId);
 
       if (calendarResult.success) {
         logCalendarUpdate(appointmentId, appointment.calendar_event_id, 'Event updated due to rescheduling');
@@ -282,13 +288,13 @@ function checkInAppointment(appointmentId, checkedInBy) {
     }
 
     // Get appointment
-    const appointment = getAppointmentById(appointmentId);
+    var appointment = getAppointmentById(appointmentId);
     if (!appointment) {
       return { success: false, message: `Appointment ${appointmentId} not found` };
     }
 
     // Check if check-in is allowed
-    const currentStatus = appointment.status;
+    var currentStatus = appointment.status;
     if (!canTransitionTo(currentStatus, 'Checked-in')) {
       return {
         success: false,
@@ -297,18 +303,18 @@ function checkInAppointment(appointmentId, checkedInBy) {
     }
 
     // Validate check-in window
-    const now = new Date();
-    const appointmentDate = parseDateInTimezone(appointment.appointment_date);
-    const appointmentTime = parseTimeToMinutes(appointment.start_time);
+    var now = new Date();
+    var appointmentDate = parseDateInTimezone(appointment.appointment_date);
+    var appointmentTime = parseTimeToMinutes(appointment.start_time);
 
     appointmentDate.setHours(Math.floor(appointmentTime / 60));
     appointmentDate.setMinutes(appointmentTime % 60);
     appointmentDate.setSeconds(0);
     appointmentDate.setMilliseconds(0);
 
-    const diffMinutes = (now - appointmentDate) / (1000 * 60);
-    const checkInWindowBefore = getConfig('check_in_window_before', 60); // 1 hour before
-    const checkInWindowAfter = getConfig('check_in_window_after', 30);   // 30 min after
+    var diffMinutes = (now - appointmentDate) / (1000 * 60);
+    var checkInWindowBefore = getConfig('check_in_window_before', 60); // 1 hour before
+    var checkInWindowAfter = getConfig('check_in_window_after', 30);   // 30 min after
 
     if (diffMinutes < -checkInWindowBefore) {
       return {
@@ -325,7 +331,7 @@ function checkInAppointment(appointmentId, checkedInBy) {
     }
 
     // Update appointment status
-    const updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
+    var updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
       status: 'Checked-in',
       checked_in_at: getCurrentTimestamp(),
       checked_in_by: checkedInBy || Session.getActiveUser().getEmail()
@@ -378,13 +384,13 @@ function markNoShow(appointmentId, markedBy, notes) {
     }
 
     // Get appointment
-    const appointment = getAppointmentById(appointmentId);
+    var appointment = getAppointmentById(appointmentId);
     if (!appointment) {
       return { success: false, message: `Appointment ${appointmentId} not found` };
     }
 
     // Check if no-show marking is allowed
-    const currentStatus = appointment.status;
+    var currentStatus = appointment.status;
     if (!canTransitionTo(currentStatus, 'No-show')) {
       return {
         success: false,
@@ -393,17 +399,17 @@ function markNoShow(appointmentId, markedBy, notes) {
     }
 
     // Validate appointment is in the past (with grace period)
-    const now = new Date();
-    const appointmentDate = parseDateInTimezone(appointment.appointment_date);
-    const appointmentTime = parseTimeToMinutes(appointment.start_time);
+    var now = new Date();
+    var appointmentDate = parseDateInTimezone(appointment.appointment_date);
+    var appointmentTime = parseTimeToMinutes(appointment.start_time);
 
     appointmentDate.setHours(Math.floor(appointmentTime / 60));
     appointmentDate.setMinutes(appointmentTime % 60);
     appointmentDate.setSeconds(0);
     appointmentDate.setMilliseconds(0);
 
-    const diffMinutes = (now - appointmentDate) / (1000 * 60);
-    const gracePeriod = getConfig('no_show_grace_period_minutes', 30);
+    var diffMinutes = (now - appointmentDate) / (1000 * 60);
+    var gracePeriod = getConfig('no_show_grace_period_minutes', 30);
 
     if (diffMinutes < gracePeriod) {
       return {
@@ -413,7 +419,7 @@ function markNoShow(appointmentId, markedBy, notes) {
     }
 
     // Update appointment status
-    const updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
+    var updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
       status: 'No-show',
       no_show_marked_at: getCurrentTimestamp(),
       no_show_marked_by: markedBy || Session.getActiveUser().getEmail(),
@@ -425,9 +431,9 @@ function markNoShow(appointmentId, markedBy, notes) {
     }
 
     // Update client's no-show count
-    const client = getClient(appointment.client_id);
+    var client = getClient(appointment.client_id);
     if (client) {
-      const currentNoShowCount = parseInt(client.no_show_count || 0);
+      var currentNoShowCount = parseInt(client.no_show_count || 0);
       updateRecordById(SHEETS.CLIENTS, appointment.client_id, {
         no_show_count: currentNoShowCount + 1
       });
@@ -435,7 +441,7 @@ function markNoShow(appointmentId, markedBy, notes) {
 
     // Update/delete calendar event (mark as cancelled)
     if (appointment.calendar_event_id) {
-      const calendarResult = deleteCalendarEvent(appointment);
+      var calendarResult = deleteCalendarEvent(appointmentId);
       if (calendarResult.success) {
         logCalendarDelete(appointmentId, appointment.calendar_event_id, 'Event deleted due to no-show');
       }
@@ -484,13 +490,13 @@ function completeAppointment(appointmentId, completedBy, notes) {
     }
 
     // Get appointment
-    const appointment = getAppointmentById(appointmentId);
+    var appointment = getAppointmentById(appointmentId);
     if (!appointment) {
       return { success: false, message: `Appointment ${appointmentId} not found` };
     }
 
     // Check if completion is allowed
-    const currentStatus = appointment.status;
+    var currentStatus = appointment.status;
     if (!canTransitionTo(currentStatus, 'Completed')) {
       return {
         success: false,
@@ -499,7 +505,7 @@ function completeAppointment(appointmentId, completedBy, notes) {
     }
 
     // Update appointment status
-    const updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
+    var updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
       status: 'Completed',
       completed_at: getCurrentTimestamp(),
       completed_by: completedBy || Session.getActiveUser().getEmail(),
@@ -550,7 +556,7 @@ function canTransitionTo(currentStatus, newStatus) {
     return false;
   }
 
-  const allowedTransitions = VALID_STATUS_TRANSITIONS[currentStatus];
+  var allowedTransitions = VALID_STATUS_TRANSITIONS[currentStatus];
   return allowedTransitions && allowedTransitions.includes(newStatus);
 }
 
@@ -561,12 +567,12 @@ function canTransitionTo(currentStatus, newStatus) {
  * @returns {boolean} True if provider offers the service
  */
 function providerOffersService(providerId, serviceId) {
-  const provider = getProvider(providerId);
+  var provider = getProvider(providerId);
   if (!provider || !provider.services_offered) {
     return false;
   }
 
-  const servicesOffered = provider.services_offered.split(',').map(function(s) {
+  var servicesOffered = provider.services_offered.split(',').map(function(s) {
     return s.trim();
   });
 

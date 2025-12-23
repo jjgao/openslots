@@ -9,31 +9,31 @@
  * Configuration cache to avoid repeated sheet reads
  * @type {Object|null}
  */
-let configCache_ = null;
+var configCache_ = null;
 
 /**
  * Timestamp of when config was last loaded
  * @type {number}
  */
-let configCacheTime_ = 0;
+var configCacheTime_ = 0;
 
 /**
  * Cache duration in milliseconds (5 minutes)
  * @const {number}
  */
-const CONFIG_CACHE_DURATION = 5 * 60 * 1000;
+var CONFIG_CACHE_DURATION = 5 * 60 * 1000;
 
 /**
  * Sheet name for system configuration
  * @const {string}
  */
-const CONFIG_SHEET_NAME = 'System_Config';
+var CONFIG_SHEET_NAME = 'System_Config';
 
 /**
  * Default configuration values used when settings are not found
  * @const {Object}
  */
-const DEFAULT_CONFIG = {
+var DEFAULT_CONFIG = {
   'business_name': 'OpenSlots Appointment Center',
   'business_hours_start': '09:00',
   'business_hours_end': '17:00',
@@ -61,7 +61,7 @@ const DEFAULT_CONFIG = {
  * @returns {string} The setting value, default value, or empty string
  */
 function getConfig(settingName, defaultValue) {
-  const config = getAllConfig();
+  var config = getAllConfig();
 
   if (config.hasOwnProperty(settingName)) {
     return config[settingName];
@@ -87,8 +87,8 @@ function getConfig(settingName, defaultValue) {
  */
 function setConfig(settingName, settingValue) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(CONFIG_SHEET_NAME);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG_SHEET_NAME);
 
     if (!sheet) {
       Logger.log('Error: System_Config sheet not found');
@@ -96,11 +96,11 @@ function setConfig(settingName, settingValue) {
     }
 
     // Get all data to find if setting exists
-    const data = sheet.getDataRange().getValues();
-    let rowIndex = -1;
+    var data = sheet.getDataRange().getValues();
+    var rowIndex = -1;
 
     // Skip header row (index 0)
-    for (let i = 1; i < data.length; i++) {
+    for (var i = 1; i < data.length; i++) {
       if (data[i][0] === settingName) {
         rowIndex = i + 1; // Convert to 1-based row number
         break;
@@ -112,7 +112,7 @@ function setConfig(settingName, settingValue) {
       sheet.getRange(rowIndex, 2).setValue(settingValue);
     } else {
       // Add new setting
-      const newRow = sheet.getLastRow() + 1;
+      var newRow = sheet.getLastRow() + 1;
       sheet.getRange(newRow, 1, 1, 2).setValues([[settingName, settingValue]]);
     }
 
@@ -134,7 +134,7 @@ function setConfig(settingName, settingValue) {
  * @returns {Object} Object with setting names as keys and values
  */
 function getAllConfig() {
-  const now = Date.now();
+  var now = Date.now();
 
   // Return cached config if still valid
   if (configCache_ && (now - configCacheTime_) < CONFIG_CACHE_DURATION) {
@@ -154,18 +154,18 @@ function getAllConfig() {
  * @returns {Object} Configuration object
  */
 function loadConfigFromSheet_() {
-  const config = {};
+  var config = {};
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(CONFIG_SHEET_NAME);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG_SHEET_NAME);
 
     if (!sheet) {
       Logger.log('Warning: System_Config sheet not found, using defaults');
       return Object.assign({}, DEFAULT_CONFIG);
     }
 
-    const lastRow = sheet.getLastRow();
+    var lastRow = sheet.getLastRow();
     if (lastRow <= 1) {
       // Only header row, no data
       Logger.log('Warning: System_Config sheet is empty, using defaults');
@@ -173,11 +173,11 @@ function loadConfigFromSheet_() {
     }
 
     // Get all data (skip header row)
-    const data = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+    var data = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
 
-    for (let i = 0; i < data.length; i++) {
-      const name = data[i][0];
-      const value = data[i][1];
+    for (var i = 0; i < data.length; i++) {
+      var name = data[i][0];
+      var value = data[i][1];
 
       if (name && name.toString().trim() !== '') {
         config[name.toString().trim()] = value !== null && value !== undefined
@@ -209,7 +209,7 @@ function invalidateConfigCache() {
  * @returns {Array<string>} Array of day names
  */
 function getBusinessDays() {
-  const days = getConfig('business_days');
+  var days = getConfig('business_days');
   return days.split(',').map(d => d.trim());
 }
 
@@ -230,7 +230,7 @@ function getBusinessHours() {
  * @returns {boolean} True if business day
  */
 function isBusinessDay(dayName) {
-  const businessDays = getBusinessDays();
+  var businessDays = getBusinessDays();
   return businessDays.includes(dayName);
 }
 
@@ -272,6 +272,6 @@ function getMinCancellationNoticeHours() {
  * @returns {string} Calendar color ID
  */
 function getCalendarColorForStatus(status) {
-  const colorKey = `calendar_color_${status.toLowerCase().replace('-', '_')}`;
+  var colorKey = `calendar_color_${status.toLowerCase().replace('-', '_')}`;
   return getConfig(colorKey, '9'); // Default to blue
 }

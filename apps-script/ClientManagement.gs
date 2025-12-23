@@ -15,9 +15,9 @@ function searchClients(searchTerm) {
     return [];
   }
 
-  const clients = getClients();
-  const term = searchTerm.trim().toLowerCase();
-  const results = [];
+  var clients = getClients();
+  var term = searchTerm.trim().toLowerCase();
+  var results = [];
 
   for (var i = 0; i < clients.length; i++) {
     var client = clients[i];
@@ -121,8 +121,12 @@ function createClient(clientData) {
   }
 
   // Log the action
-  logActivity('CLIENT_CREATED', 'Client', clientId,
-    'Created new client: ' + clientData.name);
+  logActivity({
+    actionType: 'client-create',
+    clientId: clientId,
+    newValue: clientData.name,
+    notes: 'Created new client: ' + clientData.name
+  });
 
   return {
     success: true,
@@ -187,8 +191,11 @@ function updateClient(clientId, updates) {
   var success = updateRecordById(SHEETS.CLIENTS, clientId, updateData);
 
   if (success) {
-    logActivity('CLIENT_UPDATED', 'Client', clientId,
-      'Updated client: ' + client.name);
+    logActivity({
+      actionType: 'client-update',
+      clientId: clientId,
+      notes: 'Updated client: ' + client.name
+    });
 
     return {
       success: true,

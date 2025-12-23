@@ -8,7 +8,7 @@
  * Main test runner - executes all tests and displays results
  */
 function runAllTests() {
-  const ui = SpreadsheetApp.getUi();
+  var ui = SpreadsheetApp.getUi();
 
   ui.alert(
     'Running Tests',
@@ -20,7 +20,7 @@ function runAllTests() {
   Logger.log('Starting Test Suite');
   Logger.log('========================================');
 
-  const results = [];
+  var results = [];
 
   // Setup tests
   results.push(testSheetCreation());
@@ -51,11 +51,11 @@ function runAllTests() {
  * Displays test results in a dialog
  */
 function displayTestResults(results) {
-  const passed = results.filter(r => r.passed).length;
-  const failed = results.filter(r => !r.passed).length;
-  const total = results.length;
+  var passed = results.filter(r => r.passed).length;
+  var failed = results.filter(r => !r.passed).length;
+  var total = results.length;
 
-  let message = `Test Results:\n\n`;
+  var message = `Test Results:\n\n`;
   message += `✅ Passed: ${passed}/${total}\n`;
   message += `❌ Failed: ${failed}/${total}\n\n`;
 
@@ -70,7 +70,7 @@ function displayTestResults(results) {
 
   // Log all results
   results.forEach(r => {
-    const status = r.passed ? '✅ PASS' : '❌ FAIL';
+    var status = r.passed ? '✅ PASS' : '❌ FAIL';
     Logger.log(`${status}: ${r.name} - ${r.message}`);
   });
 
@@ -85,17 +85,17 @@ function displayTestResults(results) {
  * Test: Sheet creation
  */
 function testSheetCreation() {
-  const testName = 'Sheet Creation';
+  var testName = 'Sheet Creation';
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const testSheet = ss.insertSheet('TestSheet_' + Date.now());
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var testSheet = ss.insertSheet('TestSheet_' + Date.now());
 
     if (!testSheet) {
       return { name: testName, passed: false, message: 'Failed to create sheet' };
     }
 
-    const sheetName = testSheet.getName();
+    var sheetName = testSheet.getName();
     ss.deleteSheet(testSheet);
 
     return {
@@ -116,23 +116,23 @@ function testSheetCreation() {
  * Test: Header formatting
  */
 function testHeaderFormatting() {
-  const testName = 'Header Formatting';
+  var testName = 'Header Formatting';
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const testSheet = ss.insertSheet('TestHeader_' + Date.now());
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var testSheet = ss.insertSheet('TestHeader_' + Date.now());
 
     testSheet.appendRow(['Col1', 'Col2', 'Col3']);
     formatHeaderRow(testSheet, 3);
 
-    const headerRange = testSheet.getRange(1, 1, 1, 3);
-    const fontWeight = headerRange.getFontWeight();
-    const background = headerRange.getBackground();
-    const frozenRows = testSheet.getFrozenRows();
+    var headerRange = testSheet.getRange(1, 1, 1, 3);
+    var fontWeight = headerRange.getFontWeight();
+    var background = headerRange.getBackground();
+    var frozenRows = testSheet.getFrozenRows();
 
     ss.deleteSheet(testSheet);
 
-    const isFormatted = fontWeight === 'bold' &&
+    var isFormatted = fontWeight === 'bold' &&
                         background === '#4285f4' &&
                         frozenRows === 1;
 
@@ -156,11 +156,11 @@ function testHeaderFormatting() {
  * Test: Auto-increment formula
  */
 function testAutoIncrementFormula() {
-  const testName = 'Auto-increment Formula';
+  var testName = 'Auto-increment Formula';
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const testSheet = ss.insertSheet('TestAutoInc_' + Date.now());
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var testSheet = ss.insertSheet('TestAutoInc_' + Date.now());
 
     testSheet.appendRow(['id', 'name']);
     addAutoIncrementFormula(testSheet, 'TEST', 'B');
@@ -173,13 +173,13 @@ function testAutoIncrementFormula() {
     // Force recalculation
     SpreadsheetApp.flush();
 
-    const id1 = testSheet.getRange('A2').getValue();
-    const id2 = testSheet.getRange('A3').getValue();
-    const id3 = testSheet.getRange('A4').getValue();
+    var id1 = testSheet.getRange('A2').getValue();
+    var id2 = testSheet.getRange('A3').getValue();
+    var id3 = testSheet.getRange('A4').getValue();
 
     ss.deleteSheet(testSheet);
 
-    const isCorrect = id1 === 'TEST001' && id2 === 'TEST002' && id3 === 'TEST003';
+    var isCorrect = id1 === 'TEST001' && id2 === 'TEST002' && id3 === 'TEST003';
 
     return {
       name: testName,
@@ -201,20 +201,20 @@ function testAutoIncrementFormula() {
  * Test: Email validation
  */
 function testEmailValidation() {
-  const testName = 'Email Validation';
+  var testName = 'Email Validation';
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const testSheet = ss.insertSheet('TestEmail_' + Date.now());
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var testSheet = ss.insertSheet('TestEmail_' + Date.now());
 
     testSheet.appendRow(['email']);
     addEmailValidation(testSheet, 'A2:A10', true);
 
-    const validation = testSheet.getRange('A2').getDataValidation();
+    var validation = testSheet.getRange('A2').getDataValidation();
 
     ss.deleteSheet(testSheet);
 
-    const hasValidation = validation !== null;
+    var hasValidation = validation !== null;
 
     return {
       name: testName,
@@ -236,23 +236,23 @@ function testEmailValidation() {
  * Test: Phone validation
  */
 function testPhoneValidation() {
-  const testName = 'Phone Validation';
+  var testName = 'Phone Validation';
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const testSheet = ss.insertSheet('TestPhone_' + Date.now());
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var testSheet = ss.insertSheet('TestPhone_' + Date.now());
 
     testSheet.appendRow(['phone']);
     addPhoneValidation(testSheet, 'A2:A10', false);
 
     // Check for text format (no actual validation rule, just formatting)
-    const numberFormat = testSheet.getRange('A2').getNumberFormat();
-    const note = testSheet.getRange('A2').getNote();
+    var numberFormat = testSheet.getRange('A2').getNumberFormat();
+    var note = testSheet.getRange('A2').getNote();
 
     ss.deleteSheet(testSheet);
 
-    const hasTextFormat = numberFormat === '@';
-    const hasNote = note.includes('phone number');
+    var hasTextFormat = numberFormat === '@';
+    var hasNote = note.includes('phone number');
 
     return {
       name: testName,
@@ -274,20 +274,20 @@ function testPhoneValidation() {
  * Test: Date validation
  */
 function testDateValidation() {
-  const testName = 'Date Validation';
+  var testName = 'Date Validation';
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const testSheet = ss.insertSheet('TestDate_' + Date.now());
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var testSheet = ss.insertSheet('TestDate_' + Date.now());
 
     testSheet.appendRow(['date']);
     addDateValidation(testSheet, 'A2:A10', false);
 
-    const validation = testSheet.getRange('A2').getDataValidation();
+    var validation = testSheet.getRange('A2').getDataValidation();
 
     ss.deleteSheet(testSheet);
 
-    const hasValidation = validation !== null;
+    var hasValidation = validation !== null;
 
     return {
       name: testName,
@@ -309,20 +309,20 @@ function testDateValidation() {
  * Test: Time validation
  */
 function testTimeValidation() {
-  const testName = 'Time Validation';
+  var testName = 'Time Validation';
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const testSheet = ss.insertSheet('TestTime_' + Date.now());
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var testSheet = ss.insertSheet('TestTime_' + Date.now());
 
     testSheet.appendRow(['time']);
     addTimeValidation(testSheet, 'A2:A10');
 
-    const validation = testSheet.getRange('A2').getDataValidation();
+    var validation = testSheet.getRange('A2').getDataValidation();
 
     ss.deleteSheet(testSheet);
 
-    const hasValidation = validation !== null;
+    var hasValidation = validation !== null;
 
     return {
       name: testName,
@@ -344,20 +344,20 @@ function testTimeValidation() {
  * Test: Dropdown validation
  */
 function testDropdownValidation() {
-  const testName = 'Dropdown Validation';
+  var testName = 'Dropdown Validation';
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const testSheet = ss.insertSheet('TestDropdown_' + Date.now());
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var testSheet = ss.insertSheet('TestDropdown_' + Date.now());
 
     testSheet.appendRow(['status']);
     addDropdownValidation(testSheet, 'A2:A10', ['Option1', 'Option2', 'Option3'], 'Select option');
 
-    const validation = testSheet.getRange('A2').getDataValidation();
+    var validation = testSheet.getRange('A2').getDataValidation();
 
     ss.deleteSheet(testSheet);
 
-    const hasValidation = validation !== null;
+    var hasValidation = validation !== null;
 
     return {
       name: testName,
@@ -379,20 +379,20 @@ function testDropdownValidation() {
  * Test: Number validation
  */
 function testNumberValidation() {
-  const testName = 'Number Validation';
+  var testName = 'Number Validation';
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const testSheet = ss.insertSheet('TestNumber_' + Date.now());
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var testSheet = ss.insertSheet('TestNumber_' + Date.now());
 
     testSheet.appendRow(['duration']);
     addNumberValidation(testSheet, 'A2:A10', 1, 480);
 
-    const validation = testSheet.getRange('A2').getDataValidation();
+    var validation = testSheet.getRange('A2').getDataValidation();
 
     ss.deleteSheet(testSheet);
 
-    const hasValidation = validation !== null;
+    var hasValidation = validation !== null;
 
     return {
       name: testName,
@@ -414,13 +414,13 @@ function testNumberValidation() {
  * Test: Sample data creation
  */
 function testSampleDataCreation() {
-  const testName = 'Sample Data Creation';
+  var testName = 'Sample Data Creation';
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
 
     // Check if Providers sheet has sample data
-    const providersSheet = ss.getSheetByName('Providers');
+    var providersSheet = ss.getSheetByName('Providers');
     if (!providersSheet) {
       return {
         name: testName,
@@ -429,10 +429,10 @@ function testSampleDataCreation() {
       };
     }
 
-    const providerCount = providersSheet.getLastRow() - 1; // Subtract header row
+    var providerCount = providersSheet.getLastRow() - 1; // Subtract header row
 
     // Check if we have at least some data (either sample or real)
-    const hasData = providerCount > 0;
+    var hasData = providerCount > 0;
 
     return {
       name: testName,
@@ -454,11 +454,11 @@ function testSampleDataCreation() {
  * Quick smoke test - runs essential tests only
  */
 function runQuickTests() {
-  const ui = SpreadsheetApp.getUi();
+  var ui = SpreadsheetApp.getUi();
 
   Logger.log('Running quick smoke tests...');
 
-  const results = [];
+  var results = [];
   results.push(testSheetCreation());
   results.push(testAutoIncrementFormula());
   results.push(testDropdownValidation());
@@ -470,31 +470,31 @@ function runQuickTests() {
  * Test: Business sheets exist and have correct structure
  */
 function testBusinessSheetsCreation() {
-  const testName = 'Business Sheets Creation';
+  var testName = 'Business Sheets Creation';
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
 
     // Check Business_Holidays sheet
-    const holidaysSheet = ss.getSheetByName('Business_Holidays');
+    var holidaysSheet = ss.getSheetByName('Business_Holidays');
     if (!holidaysSheet) {
       return { name: testName, passed: false, message: 'Business_Holidays sheet not found' };
     }
 
-    const holidaysHeaders = holidaysSheet.getRange(1, 1, 1, 5).getValues()[0];
-    const expectedHolidaysHeaders = ['holiday_id', 'date', 'name', 'recurring', 'notes'];
+    var holidaysHeaders = holidaysSheet.getRange(1, 1, 1, 5).getValues()[0];
+    var expectedHolidaysHeaders = ['holiday_id', 'date', 'name', 'recurring', 'notes'];
     if (JSON.stringify(holidaysHeaders) !== JSON.stringify(expectedHolidaysHeaders)) {
       return { name: testName, passed: false, message: `Business_Holidays headers incorrect: ${holidaysHeaders}` };
     }
 
     // Check Business_Exceptions sheet
-    const exceptionsSheet = ss.getSheetByName('Business_Exceptions');
+    var exceptionsSheet = ss.getSheetByName('Business_Exceptions');
     if (!exceptionsSheet) {
       return { name: testName, passed: false, message: 'Business_Exceptions sheet not found' };
     }
 
-    const exceptionsHeaders = exceptionsSheet.getRange(1, 1, 1, 6).getValues()[0];
-    const expectedExceptionsHeaders = ['exception_id', 'date', 'start_time', 'end_time', 'reason', 'notes'];
+    var exceptionsHeaders = exceptionsSheet.getRange(1, 1, 1, 6).getValues()[0];
+    var expectedExceptionsHeaders = ['exception_id', 'date', 'start_time', 'end_time', 'reason', 'notes'];
     if (JSON.stringify(exceptionsHeaders) !== JSON.stringify(expectedExceptionsHeaders)) {
       return { name: testName, passed: false, message: `Business_Exceptions headers incorrect: ${exceptionsHeaders}` };
     }
@@ -514,13 +514,13 @@ function testBusinessSheetsCreation() {
  * Test helper: Clean up any test sheets left over
  */
 function cleanupTestSheets() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheets = ss.getSheets();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = ss.getSheets();
 
-  let deletedCount = 0;
+  var deletedCount = 0;
 
   sheets.forEach(sheet => {
-    const name = sheet.getName();
+    var name = sheet.getName();
     if (name.startsWith('Test')) {
       ss.deleteSheet(sheet);
       deletedCount++;
@@ -540,9 +540,9 @@ function cleanupTestSheets() {
  * Removes test appointments and their associated calendar events
  */
 function cleanupTestData() {
-  const ui = SpreadsheetApp.getUi();
+  var ui = SpreadsheetApp.getUi();
 
-  const confirm = ui.alert(
+  var confirm = ui.alert(
     'Cleanup Test Data',
     'This will:\n' +
     '• Delete all OpenSlots provider calendars\n' +
@@ -557,12 +557,12 @@ function cleanupTestData() {
   }
 
   // Delete all provider calendars (this also clears calendar_id from providers)
-  const calResult = deleteAllProviderCalendars();
+  var calResult = deleteAllProviderCalendars();
 
   // Clear calendar_event_id from all appointments
-  let appointmentsCleared = 0;
-  const appointments = getAppointments();
-  for (let i = 0; i < appointments.length; i++) {
+  var appointmentsCleared = 0;
+  var appointments = getAppointments();
+  for (var i = 0; i < appointments.length; i++) {
     if (appointments[i].calendar_event_id) {
       updateRecordById(SHEETS.APPOINTMENTS, appointments[i].appointment_id, {
         calendar_event_id: ''
@@ -585,7 +585,7 @@ function cleanupTestData() {
  * MVP2 Test Suite - Tests for Calendar Integration + Basic Automation
  */
 function runMvp2Tests() {
-  const ui = SpreadsheetApp.getUi();
+  var ui = SpreadsheetApp.getUi();
 
   ui.alert(
     'Running MVP2 Tests',
@@ -602,7 +602,7 @@ function runMvp2Tests() {
   Logger.log('Starting MVP2 Test Suite');
   Logger.log('========================================');
 
-  const results = [];
+  var results = [];
 
   // Config tests
   results.push(testGetConfig());
@@ -638,17 +638,17 @@ function runMvp2Tests() {
  * Test: getConfig function
  */
 function testGetConfig() {
-  const testName = 'Config: getConfig()';
+  var testName = 'Config: getConfig()';
 
   try {
     // Test getting existing config
-    const businessName = getConfig('business_name');
+    var businessName = getConfig('business_name');
 
     // Test getting non-existent config with default
-    const notFound = getConfig('nonexistent_setting', 'default_value');
+    var notFound = getConfig('nonexistent_setting', 'default_value');
 
-    const hasBusinessName = businessName && businessName.length > 0;
-    const hasDefault = notFound === 'default_value';
+    var hasBusinessName = businessName && businessName.length > 0;
+    var hasDefault = notFound === 'default_value';
 
     return {
       name: testName,
@@ -666,24 +666,24 @@ function testGetConfig() {
  * Test: setConfig function
  */
 function testSetConfig() {
-  const testName = 'Config: setConfig()';
+  var testName = 'Config: setConfig()';
 
   try {
-    const testKey = 'test_setting_' + Date.now();
-    const testValue = 'test_value_123';
+    var testKey = 'test_setting_' + Date.now();
+    var testValue = 'test_value_123';
 
     // Set a test config
-    const setResult = setConfig(testKey, testValue);
+    var setResult = setConfig(testKey, testValue);
 
     // Read it back
     invalidateConfigCache();
-    const readValue = getConfig(testKey);
+    var readValue = getConfig(testKey);
 
     // Clean up - delete the test row
-    const sheet = getSheet(CONFIG_SHEET_NAME);
+    var sheet = getSheet(CONFIG_SHEET_NAME);
     if (sheet) {
-      const data = sheet.getDataRange().getValues();
-      for (let i = data.length - 1; i >= 1; i--) {
+      var data = sheet.getDataRange().getValues();
+      for (var i = data.length - 1; i >= 1; i--) {
         if (data[i][0] === testKey) {
           sheet.deleteRow(i + 1);
           break;
@@ -691,7 +691,7 @@ function testSetConfig() {
       }
     }
 
-    const passed = setResult && readValue === testValue;
+    var passed = setResult && readValue === testValue;
 
     return {
       name: testName,
@@ -709,13 +709,13 @@ function testSetConfig() {
  * Test: getAllConfig function
  */
 function testGetAllConfig() {
-  const testName = 'Config: getAllConfig()';
+  var testName = 'Config: getAllConfig()';
 
   try {
-    const config = getAllConfig();
+    var config = getAllConfig();
 
-    const isObject = typeof config === 'object';
-    const hasKeys = Object.keys(config).length > 0;
+    var isObject = typeof config === 'object';
+    var hasKeys = Object.keys(config).length > 0;
 
     return {
       name: testName,
@@ -733,21 +733,21 @@ function testGetAllConfig() {
  * Test: Time conversion utilities
  */
 function testTimeConversion() {
-  const testName = 'Utils: Time conversion';
+  var testName = 'Utils: Time conversion';
 
   try {
     // Test parseTimeToMinutes
-    const minutes1 = parseTimeToMinutes('09:30');
-    const expected1 = 9 * 60 + 30; // 570
+    var minutes1 = parseTimeToMinutes('09:30');
+    var expected1 = 9 * 60 + 30; // 570
 
-    const minutes2 = parseTimeToMinutes('14:00');
-    const expected2 = 14 * 60; // 840
+    var minutes2 = parseTimeToMinutes('14:00');
+    var expected2 = 14 * 60; // 840
 
     // Test minutesToTimeString
-    const time1 = minutesToTimeString(570);
-    const time2 = minutesToTimeString(840);
+    var time1 = minutesToTimeString(570);
+    var time2 = minutesToTimeString(840);
 
-    const passed = minutes1 === expected1 &&
+    var passed = minutes1 === expected1 &&
                    minutes2 === expected2 &&
                    time1 === '09:30' &&
                    time2 === '14:00';
@@ -768,24 +768,24 @@ function testTimeConversion() {
  * Test: Date normalization
  */
 function testDateNormalization() {
-  const testName = 'Utils: Date normalization';
+  var testName = 'Utils: Date normalization';
 
   try {
     // Test 1: Date object created with year, month, day (correct - local timezone)
-    const date1 = normalizeDate(new Date(2024, 0, 15)); // Jan 15, 2024
+    var date1 = normalizeDate(new Date(2024, 0, 15)); // Jan 15, 2024
 
     // Test 2: String input (our fix handles this correctly)
-    const date2 = normalizeDate('2024-01-15');
+    var date2 = normalizeDate('2024-01-15');
 
     // Test 3: Date created via parseDateInTimezone (correct way to create from string)
-    const date3 = normalizeDate(parseDateInTimezone('2024-01-15'));
+    var date3 = normalizeDate(parseDateInTimezone('2024-01-15'));
 
     // Note: new Date('2024-01-15') parses as UTC midnight, which shifts to
     // previous day in western timezones. This is a JavaScript pitfall that
     // can't be fixed once the Date object is created. Always use
     // parseDateInTimezone() or new Date(year, month, day) instead.
 
-    const allMatch = date1 === '2024-01-15' &&
+    var allMatch = date1 === '2024-01-15' &&
                      date2 === '2024-01-15' &&
                      date3 === '2024-01-15';
 
@@ -805,18 +805,18 @@ function testDateNormalization() {
  * Test: Time range overlap detection
  */
 function testTimeRangeOverlap() {
-  const testName = 'Utils: Time range overlap';
+  var testName = 'Utils: Time range overlap';
 
   try {
     // Overlapping ranges
-    const overlap1 = timeRangesOverlap('09:00', '10:00', '09:30', '10:30'); // true
-    const overlap2 = timeRangesOverlap('09:00', '11:00', '10:00', '10:30'); // true
+    var overlap1 = timeRangesOverlap('09:00', '10:00', '09:30', '10:30'); // true
+    var overlap2 = timeRangesOverlap('09:00', '11:00', '10:00', '10:30'); // true
 
     // Non-overlapping ranges
-    const noOverlap1 = timeRangesOverlap('09:00', '10:00', '10:00', '11:00'); // false
-    const noOverlap2 = timeRangesOverlap('09:00', '10:00', '11:00', '12:00'); // false
+    var noOverlap1 = timeRangesOverlap('09:00', '10:00', '10:00', '11:00'); // false
+    var noOverlap2 = timeRangesOverlap('09:00', '10:00', '11:00', '12:00'); // false
 
-    const passed = overlap1 === true &&
+    var passed = overlap1 === true &&
                    overlap2 === true &&
                    noOverlap1 === false &&
                    noOverlap2 === false;
@@ -837,22 +837,22 @@ function testTimeRangeOverlap() {
  * Test: getProviderAvailability
  */
 function testGetProviderAvailability() {
-  const testName = 'Availability: getProviderAvailability()';
+  var testName = 'Availability: getProviderAvailability()';
 
   try {
     // Test with a known provider and date
-    const providers = getProviders(true);
+    var providers = getProviders(true);
     if (providers.length === 0) {
       return { name: testName, passed: false, message: 'No providers found - add sample data first' };
     }
 
-    const providerId = providers[0].provider_id;
-    const testDate = addDays(new Date(), 7); // Next week
+    var providerId = providers[0].provider_id;
+    var testDate = addDays(new Date(), 7); // Next week
 
-    const availability = getProviderAvailability(providerId, testDate);
+    var availability = getProviderAvailability(providerId, testDate);
 
     // Availability should be an array
-    const isArray = Array.isArray(availability);
+    var isArray = Array.isArray(availability);
 
     return {
       name: testName,
@@ -870,20 +870,20 @@ function testGetProviderAvailability() {
  * Test: isSlotAvailable
  */
 function testIsSlotAvailable() {
-  const testName = 'Availability: isSlotAvailable()';
+  var testName = 'Availability: isSlotAvailable()';
 
   try {
-    const providers = getProviders(true);
+    var providers = getProviders(true);
     if (providers.length === 0) {
       return { name: testName, passed: false, message: 'No providers found' };
     }
 
-    const providerId = providers[0].provider_id;
-    const testDate = addDays(new Date(), 7);
+    var providerId = providers[0].provider_id;
+    var testDate = addDays(new Date(), 7);
 
     // This should return a boolean
-    const result = isSlotAvailable(providerId, testDate, '10:00', 30);
-    const isBoolean = typeof result === 'boolean';
+    var result = isSlotAvailable(providerId, testDate, '10:00', 30);
+    var isBoolean = typeof result === 'boolean';
 
     return {
       name: testName,
@@ -901,21 +901,21 @@ function testIsSlotAvailable() {
  * Test: getAvailableSlots
  */
 function testGetAvailableSlots() {
-  const testName = 'Availability: getAvailableSlots()';
+  var testName = 'Availability: getAvailableSlots()';
 
   try {
-    const providers = getProviders(true);
+    var providers = getProviders(true);
     if (providers.length === 0) {
       return { name: testName, passed: false, message: 'No providers found' };
     }
 
-    const providerId = providers[0].provider_id;
-    const testDate = addDays(new Date(), 7);
+    var providerId = providers[0].provider_id;
+    var testDate = addDays(new Date(), 7);
 
-    const slots = getAvailableSlots(providerId, testDate, 30);
+    var slots = getAvailableSlots(providerId, testDate, 30);
 
-    const isArray = Array.isArray(slots);
-    const hasCorrectFormat = slots.length === 0 || (slots[0].startTime && slots[0].endTime);
+    var isArray = Array.isArray(slots);
+    var hasCorrectFormat = slots.length === 0 || (slots[0].startTime && slots[0].endTime);
 
     return {
       name: testName,
@@ -933,15 +933,15 @@ function testGetAvailableSlots() {
  * Test: Appointment data validation
  */
 function testAppointmentValidation() {
-  const testName = 'Appointments: Validation';
+  var testName = 'Appointments: Validation';
 
   try {
     // Test missing fields
-    const result1 = validateAppointmentData({});
-    const result2 = validateAppointmentData({ clientId: 'CLI001' });
+    var result1 = validateAppointmentData({});
+    var result2 = validateAppointmentData({ clientId: 'CLI001' });
 
     // Test valid data
-    const validData = {
+    var validData = {
       clientId: 'CLI001',
       providerId: 'PROV001',
       serviceId: 'SERV001',
@@ -949,13 +949,13 @@ function testAppointmentValidation() {
       startTime: '10:00',
       duration: 30
     };
-    const result3 = validateAppointmentData(validData);
+    var result3 = validateAppointmentData(validData);
 
     // Test invalid time format
-    const invalidTime = { ...validData, startTime: 'invalid' };
-    const result4 = validateAppointmentData(invalidTime);
+    var invalidTime = { ...validData, startTime: 'invalid' };
+    var result4 = validateAppointmentData(invalidTime);
 
-    const passed = !result1.valid &&
+    var passed = !result1.valid &&
                    !result2.valid &&
                    result3.valid &&
                    !result4.valid;
@@ -976,14 +976,14 @@ function testAppointmentValidation() {
  * Test: bookAppointment function (without actually creating)
  */
 function testBookAppointment() {
-  const testName = 'Appointments: bookAppointment()';
+  var testName = 'Appointments: bookAppointment()';
 
   try {
     // Test with invalid data - should fail gracefully
-    const result1 = bookAppointment({});
+    var result1 = bookAppointment({});
 
     // Test with non-existent client
-    const result2 = bookAppointment({
+    var result2 = bookAppointment({
       clientId: 'NONEXISTENT',
       providerId: 'PROV001',
       serviceId: 'SERV001',
@@ -993,7 +993,7 @@ function testBookAppointment() {
       createCalendarEvent: false
     });
 
-    const failsCorrectly = !result1.success && !result2.success;
+    var failsCorrectly = !result1.success && !result2.success;
 
     return {
       name: testName,
@@ -1011,14 +1011,14 @@ function testBookAppointment() {
  * Test: getSheetData
  */
 function testGetSheetData() {
-  const testName = 'DataAccess: getSheetData()';
+  var testName = 'DataAccess: getSheetData()';
 
   try {
-    const providers = getSheetData(SHEETS.PROVIDERS);
-    const services = getSheetData(SHEETS.SERVICES);
+    var providers = getSheetData(SHEETS.PROVIDERS);
+    var services = getSheetData(SHEETS.SERVICES);
 
-    const providersIsArray = Array.isArray(providers);
-    const servicesIsArray = Array.isArray(services);
+    var providersIsArray = Array.isArray(providers);
+    var servicesIsArray = Array.isArray(services);
 
     return {
       name: testName,
@@ -1036,13 +1036,13 @@ function testGetSheetData() {
  * Test: findRecords
  */
 function testFindRecords() {
-  const testName = 'DataAccess: findRecords()';
+  var testName = 'DataAccess: findRecords()';
 
   try {
     // Find all active providers
-    const activeProviders = findRecords(SHEETS.PROVIDERS, { active_status: 'Active' });
+    var activeProviders = findRecords(SHEETS.PROVIDERS, { active_status: 'Active' });
 
-    const isArray = Array.isArray(activeProviders);
+    var isArray = Array.isArray(activeProviders);
 
     return {
       name: testName,
@@ -1064,21 +1064,21 @@ function testFindRecords() {
  * Test: searchClients function
  */
 function testSearchClients() {
-  const testName = 'ClientManagement: searchClients()';
+  var testName = 'ClientManagement: searchClients()';
 
   try {
     // Test empty search
-    const emptyResult = searchClients('');
+    var emptyResult = searchClients('');
 
     // Test search by name (partial match)
-    const nameResults = searchClients('john');
+    var nameResults = searchClients('john');
 
     // Test search by phone (if sample data exists)
-    const phoneResults = searchClients('555');
+    var phoneResults = searchClients('555');
 
-    const emptyIsArray = Array.isArray(emptyResult);
-    const nameIsArray = Array.isArray(nameResults);
-    const phoneIsArray = Array.isArray(phoneResults);
+    var emptyIsArray = Array.isArray(emptyResult);
+    var nameIsArray = Array.isArray(nameResults);
+    var phoneIsArray = Array.isArray(phoneResults);
 
     return {
       name: testName,
@@ -1096,15 +1096,15 @@ function testSearchClients() {
  * Test: createClient function
  */
 function testCreateClient() {
-  const testName = 'ClientManagement: createClient()';
+  var testName = 'ClientManagement: createClient()';
 
   try {
     // Test with missing required fields
-    const result1 = createClient({});
-    const result2 = createClient({ name: 'Test' }); // Missing phone
+    var result1 = createClient({});
+    var result2 = createClient({ name: 'Test' }); // Missing phone
 
     // Both should fail
-    const failsCorrectly = !result1.success && !result2.success;
+    var failsCorrectly = !result1.success && !result2.success;
 
     return {
       name: testName,
@@ -1122,16 +1122,16 @@ function testCreateClient() {
  * Test: updateClientVisitHistory function
  */
 function testUpdateClientVisitHistory() {
-  const testName = 'ClientManagement: updateClientVisitHistory()';
+  var testName = 'ClientManagement: updateClientVisitHistory()';
 
   try {
     // Test with invalid inputs
-    const result1 = updateClientVisitHistory(null, '2025-01-01');
-    const result2 = updateClientVisitHistory('CLI999', null);
-    const result3 = updateClientVisitHistory('NONEXISTENT', '2025-01-01');
+    var result1 = updateClientVisitHistory(null, '2025-01-01');
+    var result2 = updateClientVisitHistory('CLI999', null);
+    var result3 = updateClientVisitHistory('NONEXISTENT', '2025-01-01');
 
     // All should return false or handle gracefully
-    const failsCorrectly = !result1 && !result2 && !result3;
+    var failsCorrectly = !result1 && !result2 && !result3;
 
     return {
       name: testName,
@@ -1149,20 +1149,20 @@ function testUpdateClientVisitHistory() {
  * Test: getClientAppointmentHistory function
  */
 function testGetClientAppointmentHistory() {
-  const testName = 'ClientManagement: getClientAppointmentHistory()';
+  var testName = 'ClientManagement: getClientAppointmentHistory()';
 
   try {
     // Test with invalid client ID
-    const result1 = getClientAppointmentHistory(null);
-    const result2 = getClientAppointmentHistory('NONEXISTENT');
+    var result1 = getClientAppointmentHistory(null);
+    var result2 = getClientAppointmentHistory('NONEXISTENT');
 
     // Both should return empty arrays
-    const handlesInvalid = Array.isArray(result1) && result1.length === 0 &&
+    var handlesInvalid = Array.isArray(result1) && result1.length === 0 &&
                            Array.isArray(result2) && result2.length === 0;
 
     // Test with valid client (if sample data exists)
-    const result3 = getClientAppointmentHistory('CLI001');
-    const isArray = Array.isArray(result3);
+    var result3 = getClientAppointmentHistory('CLI001');
+    var isArray = Array.isArray(result3);
 
     return {
       name: testName,
@@ -1180,13 +1180,13 @@ function testGetClientAppointmentHistory() {
  * Test: getClientStats function
  */
 function testGetClientStats() {
-  const testName = 'ClientManagement: getClientStats()';
+  var testName = 'ClientManagement: getClientStats()';
 
   try {
     // Test with valid client (if exists)
-    const stats = getClientStats('CLI001');
+    var stats = getClientStats('CLI001');
 
-    const hasRequiredFields = stats &&
+    var hasRequiredFields = stats &&
                               typeof stats.total_appointments === 'number' &&
                               typeof stats.completed === 'number' &&
                               typeof stats.cancelled === 'number' &&
@@ -1209,15 +1209,15 @@ function testGetClientStats() {
  * Test: getAvailableTimeSlots function
  */
 function testGetAvailableTimeSlots() {
-  const testName = 'BookingUI: getAvailableTimeSlots()';
+  var testName = 'BookingUI: getAvailableTimeSlots()';
 
   try {
     // Test with missing parameters
-    const result1 = getAvailableTimeSlots(null, null, null);
-    const result2 = getAvailableTimeSlots('PROV001', null, 30);
+    var result1 = getAvailableTimeSlots(null, null, null);
+    var result2 = getAvailableTimeSlots('PROV001', null, 30);
 
     // Should return error for missing params
-    const failsCorrectly = !result1.success && !result2.success;
+    var failsCorrectly = !result1.success && !result2.success;
 
     return {
       name: testName,
@@ -1235,13 +1235,13 @@ function testGetAvailableTimeSlots() {
  * Test: getBookingFormData function
  */
 function testGetBookingFormData() {
-  const testName = 'BookingUI: getBookingFormData()';
+  var testName = 'BookingUI: getBookingFormData()';
 
   try {
-    const formData = getBookingFormData();
+    var formData = getBookingFormData();
 
-    const hasProviders = formData && Array.isArray(formData.providers);
-    const hasServices = formData && Array.isArray(formData.services);
+    var hasProviders = formData && Array.isArray(formData.providers);
+    var hasServices = formData && Array.isArray(formData.services);
 
     return {
       name: testName,
@@ -1259,7 +1259,7 @@ function testGetBookingFormData() {
  * Runs all MVP3 tests
  */
 function runMvp3Tests() {
-  const ui = SpreadsheetApp.getUi();
+  var ui = SpreadsheetApp.getUi();
 
   ui.alert(
     'Running MVP3 Tests',
@@ -1275,7 +1275,7 @@ function runMvp3Tests() {
   Logger.log('Starting MVP3 Test Suite');
   Logger.log('========================================');
 
-  const results = [];
+  var results = [];
 
   // Client management tests
   results.push(testSearchClients());

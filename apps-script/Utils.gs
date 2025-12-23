@@ -33,12 +33,12 @@ function parseTimeToMinutes(time) {
     return time.getHours() * 60 + time.getMinutes();
   }
 
-  const timeStr = time.toString();
-  const parts = timeStr.split(':');
+  var timeStr = time.toString();
+  var parts = timeStr.split(':');
 
   if (parts.length >= 2) {
-    const hours = parseInt(parts[0], 10) || 0;
-    const minutes = parseInt(parts[1], 10) || 0;
+    var hours = parseInt(parts[0], 10) || 0;
+    var minutes = parseInt(parts[1], 10) || 0;
     return hours * 60 + minutes;
   }
 
@@ -51,8 +51,8 @@ function parseTimeToMinutes(time) {
  * @returns {string} Time in HH:MM format
  */
 function minutesToTimeString(minutes) {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
+  var hours = Math.floor(minutes / 60);
+  var mins = minutes % 60;
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 }
 
@@ -62,7 +62,7 @@ function minutesToTimeString(minutes) {
  * @returns {string} Day name (e.g., 'Monday')
  */
 function getDayName(date) {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   if (typeof date === 'string') {
     date = parseDateInTimezone(date);
@@ -87,8 +87,8 @@ function isSameDate(date1, date2) {
  * @returns {boolean} True if date is in the future
  */
 function isFutureDate(date) {
-  const targetDate = typeof date === 'string' ? parseDateInTimezone(date) : new Date(date);
-  const today = new Date();
+  var targetDate = typeof date === 'string' ? parseDateInTimezone(date) : new Date(date);
+  var today = new Date();
 
   // Set both to start of day for comparison
   targetDate.setHours(0, 0, 0, 0);
@@ -123,8 +123,8 @@ function isTodayOrFuture(date) {
  * @returns {Date} Combined Date object in script timezone
  */
 function combineDateAndTime(date, time) {
-  let hours = 0;
-  let minutes = 0;
+  var hours = 0;
+  var minutes = 0;
 
   // Handle time - can be Date object (from Sheets) or string (HH:MM)
   if (time instanceof Date) {
@@ -133,7 +133,7 @@ function combineDateAndTime(date, time) {
     minutes = time.getMinutes();
   } else if (time) {
     // String format "HH:MM"
-    const timeParts = time.toString().split(':');
+    var timeParts = time.toString().split(':');
     hours = parseInt(timeParts[0], 10) || 0;
     minutes = parseInt(timeParts[1], 10) || 0;
   }
@@ -141,12 +141,12 @@ function combineDateAndTime(date, time) {
   if (typeof date === 'string') {
     // Parse date string in script timezone to avoid UTC midnight issue
     // new Date('YYYY-MM-DD') parses as UTC midnight, which shifts day in western timezones
-    const dateStr = `${date} ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+    var dateStr = `${date} ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
     return Utilities.parseDate(dateStr, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
   }
 
   // For Date objects, create a new date and set the time
-  const d = new Date(date);
+  var d = new Date(date);
   d.setHours(hours, minutes, 0, 0);
   return d;
 }
@@ -158,8 +158,8 @@ function combineDateAndTime(date, time) {
  * @returns {string} End time in HH:MM format
  */
 function calculateEndTime(startTime, duration) {
-  const startMinutes = parseTimeToMinutes(startTime);
-  const endMinutes = startMinutes + duration;
+  var startMinutes = parseTimeToMinutes(startTime);
+  var endMinutes = startMinutes + duration;
   return minutesToTimeString(endMinutes);
 }
 
@@ -172,10 +172,10 @@ function calculateEndTime(startTime, duration) {
  * @returns {boolean} True if ranges overlap
  */
 function timeRangesOverlap(start1, end1, start2, end2) {
-  const s1 = parseTimeToMinutes(start1);
-  const e1 = parseTimeToMinutes(end1);
-  const s2 = parseTimeToMinutes(start2);
-  const e2 = parseTimeToMinutes(end2);
+  var s1 = parseTimeToMinutes(start1);
+  var e1 = parseTimeToMinutes(end1);
+  var s2 = parseTimeToMinutes(start2);
+  var e2 = parseTimeToMinutes(end2);
 
   // Ranges overlap if one starts before the other ends
   return s1 < e2 && s2 < e1;
@@ -189,9 +189,9 @@ function timeRangesOverlap(start1, end1, start2, end2) {
  * @returns {boolean} True if time is within range
  */
 function isTimeInRange(time, rangeStart, rangeEnd) {
-  const t = parseTimeToMinutes(time);
-  const start = parseTimeToMinutes(rangeStart);
-  const end = parseTimeToMinutes(rangeEnd);
+  var t = parseTimeToMinutes(time);
+  var start = parseTimeToMinutes(rangeStart);
+  var end = parseTimeToMinutes(rangeEnd);
 
   return t >= start && t < end;
 }
@@ -202,8 +202,8 @@ function isTimeInRange(time, rangeStart, rangeEnd) {
  * @returns {string} Unique ID
  */
 function generateUniqueId(prefix) {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 6);
+  var timestamp = Date.now().toString(36);
+  var random = Math.random().toString(36).substring(2, 6);
   return `${prefix}_${timestamp}_${random}`.toUpperCase();
 }
 
@@ -234,7 +234,7 @@ function isValidEmail(email) {
   if (!email || typeof email !== 'string') {
     return false;
   }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email.trim());
 }
 
@@ -248,7 +248,7 @@ function isValidPhone(phone) {
     return false;
   }
   // Remove common formatting characters
-  const cleaned = phone.toString().replace(/[\s\-\(\)\+\.]/g, '');
+  var cleaned = phone.toString().replace(/[\s\-\(\)\+\.]/g, '');
   // Check if it's at least 7 digits
   return /^\d{7,15}$/.test(cleaned);
 }
@@ -262,7 +262,7 @@ function isValidTimeFormat(time) {
   if (!time || typeof time !== 'string') {
     return false;
   }
-  const timeRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])$/;
+  var timeRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])$/;
   return timeRegex.test(time.trim());
 }
 
@@ -275,7 +275,7 @@ function isValidDateFormat(date) {
   if (!date) {
     return false;
   }
-  const d = new Date(date);
+  var d = new Date(date);
   return !isNaN(d.getTime());
 }
 
@@ -285,8 +285,8 @@ function isValidDateFormat(date) {
  * @returns {Object} Cleaned object
  */
 function trimObjectStrings(obj) {
-  const result = {};
-  for (const key in obj) {
+  var result = {};
+  for (var key in obj) {
     if (typeof obj[key] === 'string') {
       result[key] = obj[key].trim();
     } else {
@@ -329,7 +329,7 @@ function getCurrentTimestamp() {
  * @returns {Date} New date
  */
 function addDays(date, days) {
-  const result = new Date(date);
+  var result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;
 }
@@ -341,9 +341,9 @@ function addDays(date, days) {
  * @returns {Array<Date>} Array of dates
  */
 function getDateRange(startDate, endDate) {
-  const dates = [];
-  const currentDate = new Date(startDate);
-  const end = new Date(endDate);
+  var dates = [];
+  var currentDate = new Date(startDate);
+  var end = new Date(endDate);
 
   while (currentDate <= end) {
     dates.push(new Date(currentDate));
