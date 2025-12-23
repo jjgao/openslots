@@ -1294,3 +1294,595 @@ function runMvp3Tests() {
   Logger.log('MVP3 Test Suite Complete');
   Logger.log('========================================');
 }
+
+// ============================================================================
+// MVP 4 TESTS: Appointment Management
+// ============================================================================
+
+/**
+ * Helper: Creates a test appointment for management testing
+ * @returns {string} Appointment ID
+ */
+function createTestAppointmentForManagement() {
+  var providers = getProviders(true);
+  var clients = getClients();
+  var services = getServices(true);
+
+  if (providers.length === 0 || clients.length === 0 || services.length === 0) {
+    throw new Error('Sample data required for tests. Run "Add Sample Data" first.');
+  }
+
+  var futureDate = addDays(new Date(), 7);
+  var appointmentData = {
+    clientId: clients[0].client_id,
+    providerId: providers[0].provider_id,
+    serviceId: services[0].service_id,
+    date: normalizeDate(futureDate),
+    startTime: '10:00',
+    duration: 30,
+    status: 'Booked',
+    createCalendarEvent: false
+  };
+
+  var result = bookAppointment(appointmentData);
+  if (!result.success) {
+    throw new Error('Failed to create test appointment: ' + result.message);
+  }
+
+  return result.appointment_id;
+}
+
+/**
+ * Test: Cancel appointment
+ */
+function testCancelAppointment() {
+  var testName = 'AppointmentMgmt: cancelAppointment()';
+
+  try {
+    var appointmentId = createTestAppointmentForManagement();
+
+    // Cancel the appointment
+    var result = cancelAppointment(appointmentId, 'Test cancellation', 'test@example.com');
+
+    // Verify success
+    if (!result.success) {
+      return { name: testName, passed: false, message: 'Failed to cancel: ' + result.message };
+    }
+
+    // Verify status changed
+    var appointment = getAppointmentById(appointmentId);
+    var statusChanged = appointment.status === 'Cancelled';
+
+    // Cleanup
+    deleteTestAppointment(appointmentId);
+
+    return {
+      name: testName,
+      passed: statusChanged,
+      message: statusChanged
+        ? 'Appointment cancelled successfully'
+        : 'Status not updated to Cancelled: ' + appointment.status
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Test: Cannot cancel already cancelled appointment
+ */
+function testCancelAlreadyCancelled() {
+  var testName = 'AppointmentMgmt: Cancel already cancelled';
+
+  try {
+    var appointmentId = createTestAppointmentForManagement();
+
+    // Cancel once
+    cancelAppointment(appointmentId, 'First cancellation');
+
+    // Try to cancel again
+    var result = cancelAppointment(appointmentId, 'Second cancellation');
+
+    // Should fail
+    var correctlyFailed = !result.success;
+
+    // Cleanup
+    deleteTestAppointment(appointmentId);
+
+    return {
+      name: testName,
+      passed: correctlyFailed,
+      message: correctlyFailed
+        ? 'Correctly prevented double cancellation'
+        : 'Should not allow cancelling already cancelled appointment'
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Test: Reschedule appointment
+ */
+function testRescheduleAppointment() {
+  var testName = 'AppointmentMgmt: rescheduleAppointment()';
+
+  try {
+    var appointmentId = createTestAppointmentForManagement();
+    var originalAppointment = getAppointmentById(appointmentId);
+
+    // Reschedule to different date/time
+    var newDate = normalizeDate(addDays(new Date(), 10));
+    var result = rescheduleAppointment(appointmentId, {
+      newDate: newDate,
+      newStartTime: '14:00',
+      reason: 'Test reschedule'
+    });
+
+    // Verify success
+    if (!result.success) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Failed to reschedule: ' + result.message };
+    }
+
+    // Verify changes applied
+    var updatedAppointment = getAppointmentById(appointmentId);
+    var dateChanged = updatedAppointment.appointment_date === newDate;
+    var timeChanged = updatedAppointment.start_time === '14:00';
+    var statusChanged = updatedAppointment.status === 'Rescheduled';
+
+    // Cleanup
+    deleteTestAppointment(appointmentId);
+
+    var passed = dateChanged && timeChanged && statusChanged;
+
+    return {
+      name: testName,
+      passed: passed,
+      message: passed
+        ? 'Appointment rescheduled successfully'
+        : 'Date: ' + dateChanged + ', Time: ' + timeChanged + ', Status: ' + statusChanged
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Test: Cannot reschedule to unavailable slot
+ */
+function testRescheduleToUnavailableSlot() {
+  var testName = 'AppointmentMgmt: Reschedule to unavailable';
+
+  try {
+    // Create two appointments at different times
+    var apt1 = createTestAppointmentForManagement();
+
+    var providers = getProviders(true);
+    var clients = getClients();
+    var services = getServices(true);
+
+    var futureDate = addDays(new Date(), 7);
+    var apt2Result = bookAppointment({
+      clientId: clients[1] ? clients[1].client_id : clients[0].client_id,
+      providerId: providers[0].provider_id,
+      serviceId: services[0].service_id,
+      date: normalizeDate(futureDate),
+      startTime: '11:00',
+      duration: 60,
+      status: 'Booked',
+      createCalendarEvent: false
+    });
+
+    var apt2 = apt2Result.appointment_id;
+
+    // Try to reschedule apt1 to overlap with apt2
+    var result = rescheduleAppointment(apt1, {
+      newDate: normalizeDate(futureDate),
+      newStartTime: '11:30', // Overlaps with apt2 (11:00-12:00)
+      reason: 'Test conflict'
+    });
+
+    // Should fail
+    var correctlyFailed = !result.success;
+
+    // Cleanup
+    deleteTestAppointment(apt1);
+    deleteTestAppointment(apt2);
+
+    return {
+      name: testName,
+      passed: correctlyFailed,
+      message: correctlyFailed
+        ? 'Correctly prevented reschedule to unavailable slot'
+        : 'Should not allow rescheduling to conflicting time'
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Test: Check in appointment
+ */
+function testCheckInAppointment() {
+  var testName = 'AppointmentMgmt: checkInAppointment()';
+
+  try {
+    // Create appointment for today
+    var providers = getProviders(true);
+    var clients = getClients();
+    var services = getServices(true);
+
+    var today = new Date();
+    var result = bookAppointment({
+      clientId: clients[0].client_id,
+      providerId: providers[0].provider_id,
+      serviceId: services[0].service_id,
+      date: normalizeDate(today),
+      startTime: minutesToTimeString(getCurrentMinutes()),
+      duration: 30,
+      status: 'Booked',
+      createCalendarEvent: false
+    });
+
+    var appointmentId = result.appointment_id;
+
+    // Check in
+    var checkInResult = checkInAppointment(appointmentId, 'test@example.com');
+
+    // Verify success
+    if (!checkInResult.success) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Failed to check in: ' + checkInResult.message };
+    }
+
+    // Verify status changed
+    var appointment = getAppointmentById(appointmentId);
+    var statusChanged = appointment.status === 'Checked-in';
+
+    // Cleanup
+    deleteTestAppointment(appointmentId);
+
+    return {
+      name: testName,
+      passed: statusChanged,
+      message: statusChanged
+        ? 'Client checked in successfully'
+        : 'Status not updated: ' + appointment.status
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Test: Cannot check in already checked-in appointment
+ */
+function testCheckInAlreadyCheckedIn() {
+  var testName = 'AppointmentMgmt: Check in already checked-in';
+
+  try {
+    // Create appointment for today
+    var providers = getProviders(true);
+    var clients = getClients();
+    var services = getServices(true);
+
+    var today = new Date();
+    var result = bookAppointment({
+      clientId: clients[0].client_id,
+      providerId: providers[0].provider_id,
+      serviceId: services[0].service_id,
+      date: normalizeDate(today),
+      startTime: minutesToTimeString(getCurrentMinutes()),
+      duration: 30,
+      status: 'Booked',
+      createCalendarEvent: false
+    });
+
+    var appointmentId = result.appointment_id;
+
+    // Check in once
+    checkInAppointment(appointmentId);
+
+    // Try to check in again
+    var secondCheckIn = checkInAppointment(appointmentId);
+
+    // Should fail
+    var correctlyFailed = !secondCheckIn.success;
+
+    // Cleanup
+    deleteTestAppointment(appointmentId);
+
+    return {
+      name: testName,
+      passed: correctlyFailed,
+      message: correctlyFailed
+        ? 'Correctly prevented double check-in'
+        : 'Should not allow checking in already checked-in appointment'
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Test: Mark no-show
+ */
+function testMarkNoShow() {
+  var testName = 'AppointmentMgmt: markNoShow()';
+
+  try {
+    // Create appointment in the past (beyond grace period)
+    var providers = getProviders(true);
+    var clients = getClients();
+    var services = getServices(true);
+
+    var pastDate = addDays(new Date(), -1); // Yesterday
+    var result = bookAppointment({
+      clientId: clients[0].client_id,
+      providerId: providers[0].provider_id,
+      serviceId: services[0].service_id,
+      date: normalizeDate(pastDate),
+      startTime: '10:00',
+      duration: 30,
+      status: 'Booked',
+      createCalendarEvent: false
+    });
+
+    var appointmentId = result.appointment_id;
+    var clientId = clients[0].client_id;
+
+    // Get current no-show count
+    var clientBefore = getClient(clientId);
+    var noShowCountBefore = parseInt(clientBefore.no_show_count || 0);
+
+    // Mark as no-show
+    var noShowResult = markNoShow(appointmentId, 'test@example.com', 'Test no-show');
+
+    // Verify success
+    if (!noShowResult.success) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Failed to mark no-show: ' + noShowResult.message };
+    }
+
+    // Verify status changed
+    var appointment = getAppointmentById(appointmentId);
+    var statusChanged = appointment.status === 'No-show';
+
+    // Verify client no-show count incremented
+    invalidateClientsCache();
+    var clientAfter = getClient(clientId);
+    var noShowCountAfter = parseInt(clientAfter.no_show_count || 0);
+    var countIncremented = noShowCountAfter === noShowCountBefore + 1;
+
+    // Cleanup (restore no-show count)
+    updateRecordById(SHEETS.CLIENTS, clientId, {
+      no_show_count: noShowCountBefore
+    });
+    deleteTestAppointment(appointmentId);
+
+    var passed = statusChanged && countIncremented;
+
+    return {
+      name: testName,
+      passed: passed,
+      message: passed
+        ? 'No-show marked and client count updated'
+        : 'Status: ' + statusChanged + ', Count: ' + countIncremented
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Test: Cannot mark future appointment as no-show
+ */
+function testNoShowFutureAppointment() {
+  var testName = 'AppointmentMgmt: No-show future appointment';
+
+  try {
+    var appointmentId = createTestAppointmentForManagement(); // Future appointment
+
+    // Try to mark as no-show
+    var result = markNoShow(appointmentId, 'test@example.com');
+
+    // Should fail
+    var correctlyFailed = !result.success;
+
+    // Cleanup
+    deleteTestAppointment(appointmentId);
+
+    return {
+      name: testName,
+      passed: correctlyFailed,
+      message: correctlyFailed
+        ? 'Correctly prevented marking future appointment as no-show'
+        : 'Should not allow marking future appointments as no-show'
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Test: Status transitions
+ */
+function testStatusTransitions() {
+  var testName = 'AppointmentMgmt: Status transitions';
+
+  try {
+    // Test valid transitions
+    var validBooked = canTransitionTo('Booked', 'Cancelled');
+    var validConfirmed = canTransitionTo('Confirmed', 'Checked-in');
+    var validCheckedIn = canTransitionTo('Checked-in', 'Completed');
+
+    // Test invalid transitions
+    var invalidCancelled = !canTransitionTo('Cancelled', 'Booked');
+    var invalidCompleted = !canTransitionTo('Completed', 'Cancelled');
+    var invalidNoShow = !canTransitionTo('No-show', 'Checked-in');
+
+    var allValid = validBooked && validConfirmed && validCheckedIn;
+    var allInvalid = invalidCancelled && invalidCompleted && invalidNoShow;
+    var passed = allValid && allInvalid;
+
+    return {
+      name: testName,
+      passed: passed,
+      message: passed
+        ? 'Status transition rules enforced correctly'
+        : 'Valid: ' + allValid + ', Invalid blocked: ' + allInvalid
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Test: Complete appointment
+ */
+function testCompleteAppointment() {
+  var testName = 'AppointmentMgmt: completeAppointment()';
+
+  try {
+    // Create and check in appointment
+    var providers = getProviders(true);
+    var clients = getClients();
+    var services = getServices(true);
+
+    var today = new Date();
+    var result = bookAppointment({
+      clientId: clients[0].client_id,
+      providerId: providers[0].provider_id,
+      serviceId: services[0].service_id,
+      date: normalizeDate(today),
+      startTime: minutesToTimeString(getCurrentMinutes() - 30), // 30 min ago
+      duration: 30,
+      status: 'Booked',
+      createCalendarEvent: false
+    });
+
+    var appointmentId = result.appointment_id;
+
+    // Check in first (required for completion)
+    checkInAppointment(appointmentId);
+
+    // Complete
+    var completeResult = completeAppointment(appointmentId, 'test@example.com', 'Test completion');
+
+    // Verify success
+    if (!completeResult.success) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Failed to complete: ' + completeResult.message };
+    }
+
+    // Verify status changed
+    var appointment = getAppointmentById(appointmentId);
+    var statusChanged = appointment.status === 'Completed';
+
+    // Cleanup
+    deleteTestAppointment(appointmentId);
+
+    return {
+      name: testName,
+      passed: statusChanged,
+      message: statusChanged
+        ? 'Appointment completed successfully'
+        : 'Status not updated: ' + appointment.status
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Helper: Delete test appointment
+ */
+function deleteTestAppointment(appointmentId) {
+  try {
+    var sheet = getSheet(SHEETS.APPOINTMENTS);
+    if (!sheet) return;
+
+    var data = sheet.getDataRange().getValues();
+    for (var i = data.length - 1; i >= 1; i--) {
+      if (data[i][0] === appointmentId) {
+        sheet.deleteRow(i + 1);
+        break;
+      }
+    }
+  } catch (error) {
+    Logger.log('Error deleting test appointment: ' + error.toString());
+  }
+}
+
+/**
+ * Helper: Get current time in minutes since midnight
+ */
+function getCurrentMinutes() {
+  var now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+/**
+ * Runs all MVP4 tests
+ */
+function runMvp4Tests() {
+  var ui = SpreadsheetApp.getUi();
+
+  ui.alert(
+    'Running MVP4 Tests',
+    'This will run tests for:\n' +
+    '• Appointment cancellation\n' +
+    '• Appointment rescheduling\n' +
+    '• Check-in functionality\n' +
+    '• No-show tracking\n' +
+    '• Status transitions\n\n' +
+    'This may take 30-45 seconds.',
+    ui.ButtonSet.OK
+  );
+
+  Logger.log('========================================');
+  Logger.log('Starting MVP4 Test Suite');
+  Logger.log('========================================');
+
+  var results = [];
+
+  // Cancel tests
+  results.push(testCancelAppointment());
+  results.push(testCancelAlreadyCancelled());
+
+  // Reschedule tests
+  results.push(testRescheduleAppointment());
+  results.push(testRescheduleToUnavailableSlot());
+
+  // Check-in tests
+  results.push(testCheckInAppointment());
+  results.push(testCheckInAlreadyCheckedIn());
+
+  // No-show tests
+  results.push(testMarkNoShow());
+  results.push(testNoShowFutureAppointment());
+
+  // Status transition tests
+  results.push(testStatusTransitions());
+
+  // Complete tests
+  results.push(testCompleteAppointment());
+
+  displayTestResults(results);
+
+  Logger.log('========================================');
+  Logger.log('MVP4 Test Suite Complete');
+  Logger.log('========================================');
+}

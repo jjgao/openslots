@@ -36,6 +36,7 @@ function onOpen() {
       .addItem('Run Quick Tests', 'runQuickTests')
       .addItem('Run MVP2 Tests', 'runMvp2Tests')
       .addItem('Run MVP3 Tests', 'runMvp3Tests')
+      .addItem('Run MVP4 Tests', 'runMvp4Tests')
       .addSeparator()
       .addItem('Cleanup Test Sheets', 'cleanupTestSheets')
       .addItem('Cleanup Calendar Events', 'cleanupTestData'))
