@@ -174,3 +174,167 @@ function columnToLetter(column) {
   }
   return letter;
 }
+
+/**
+ * Validates all system data and reports issues
+ * This function checks:
+ * - Sheet structures (correct columns)
+ * - Data integrity (no missing references)
+ * - Column naming consistency
+ */
+function validateSystemData() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var issues = [];
+
+  ui.alert(
+    'Validating Data',
+    'Checking system data integrity...\n\nThis may take a few seconds.',
+    ui.ButtonSet.OK
+  );
+
+  // Expected sheet structures
+  var expectedStructures = {
+    'Providers': ['provider_id', 'name', 'email', 'phone', 'services_offered', 'active_status', 'calendar_id'],
+    'Services': ['service_id', 'name', 'default_duration_options', 'description'],
+    'Clients': ['client_id', 'name', 'phone', 'email', 'notes', 'first_visit_date', 'last_visit_date'],
+    'Appointments': ['appointment_id', 'client_id', 'provider_id', 'service_id', 'appointment_date', 'start_time', 'end_time', 'duration', 'status', 'created_date', 'notes', 'calendar_event_id']
+  };
+
+  // Check 1: Verify sheet structures
+  for (var sheetName in expectedStructures) {
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      issues.push('CRITICAL: Sheet "' + sheetName + '" not found');
+      continue;
+    }
+
+    var headers = sheet.getRange(1, 1, 1, expectedStructures[sheetName].length).getValues()[0];
+    var expectedHeaders = expectedStructures[sheetName];
+
+    for (var i = 0; i < expectedHeaders.length; i++) {
+      if (headers[i] !== expectedHeaders[i]) {
+        issues.push('Sheet "' + sheetName + '" column ' + (i + 1) + ': Expected "' + expectedHeaders[i] + '" but found "' + headers[i] + '"');
+      }
+    }
+  }
+
+  // Check 2: Verify Services sheet has 'name' column (not 'service_name')
+  var servicesSheet = ss.getSheetByName('Services');
+  if (servicesSheet) {
+    var servicesHeaders = servicesSheet.getRange(1, 1, 1, 4).getValues()[0];
+    if (servicesHeaders[1] !== 'name') {
+      issues.push('CRITICAL: Services sheet column 2 should be "name" but is "' + servicesHeaders[1] + '"');
+    }
+  }
+
+  // Check 3: Verify data integrity - all services have names
+  try {
+    var services = getServices();
+    for (var i = 0; i < services.length; i++) {
+      var service = services[i];
+      if (!service.name || service.name === '') {
+        issues.push('Service ' + service.service_id + ' has no name (row ' + (i + 2) + ')');
+      }
+      if (!service.service_id || service.service_id === '') {
+        issues.push('Service at row ' + (i + 2) + ' has no ID');
+      }
+    }
+  } catch (error) {
+    issues.push('ERROR reading Services: ' + error.toString());
+  }
+
+  // Check 4: Verify appointments reference valid services
+  try {
+    var appointments = getAppointments();
+    var serviceIds = {};
+    var services = getServices();
+    for (var i = 0; i < services.length; i++) {
+      serviceIds[services[i].service_id] = true;
+    }
+
+    for (var i = 0; i < appointments.length; i++) {
+      var apt = appointments[i];
+      if (!serviceIds[apt.service_id]) {
+        issues.push('Appointment ' + apt.appointment_id + ' references invalid service "' + apt.service_id + '"');
+      }
+    }
+  } catch (error) {
+    issues.push('ERROR checking appointment references: ' + error.toString());
+  }
+
+  // Check 5: Verify clients are referenced correctly
+  try {
+    var appointments = getAppointments();
+    var clientIds = {};
+    var clients = getClients();
+    for (var i = 0; i < clients.length; i++) {
+      clientIds[clients[i].client_id] = true;
+    }
+
+    for (var i = 0; i < appointments.length; i++) {
+      var apt = appointments[i];
+      if (!clientIds[apt.client_id]) {
+        issues.push('Appointment ' + apt.appointment_id + ' references invalid client "' + apt.client_id + '"');
+      }
+    }
+  } catch (error) {
+    issues.push('ERROR checking client references: ' + error.toString());
+  }
+
+  // Check 6: Verify providers are referenced correctly
+  try {
+    var appointments = getAppointments();
+    var providerIds = {};
+    var providers = getProviders();
+    for (var i = 0; i < providers.length; i++) {
+      providerIds[providers[i].provider_id] = true;
+    }
+
+    for (var i = 0; i < appointments.length; i++) {
+      var apt = appointments[i];
+      if (!providerIds[apt.provider_id]) {
+        issues.push('Appointment ' + apt.appointment_id + ' references invalid provider "' + apt.provider_id + '"');
+      }
+    }
+  } catch (error) {
+    issues.push('ERROR checking provider references: ' + error.toString());
+  }
+
+  // Report results
+  if (issues.length === 0) {
+    ui.alert(
+      'Validation Complete',
+      '✅ All data is valid!\n\n' +
+      'All sheets have correct structure and all references are valid.',
+      ui.ButtonSet.OK
+    );
+  } else {
+    var message = '❌ Found ' + issues.length + ' issue(s):\n\n';
+
+    // Show first 10 issues
+    var displayIssues = issues.slice(0, 10);
+    for (var i = 0; i < displayIssues.length; i++) {
+      message += (i + 1) + '. ' + displayIssues[i] + '\n';
+    }
+
+    if (issues.length > 10) {
+      message += '\n... and ' + (issues.length - 10) + ' more issues.';
+    }
+
+    message += '\n\nCheck Apps Script logs for full details.';
+
+    // Log all issues
+    Logger.log('=== DATA VALIDATION ISSUES ===');
+    for (var i = 0; i < issues.length; i++) {
+      Logger.log((i + 1) + '. ' + issues[i]);
+    }
+    Logger.log('=== END VALIDATION ===');
+
+    ui.alert(
+      'Validation Failed',
+      message,
+      ui.ButtonSet.OK
+    );
+  }
+}

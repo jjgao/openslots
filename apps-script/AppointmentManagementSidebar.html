@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 15px;
+      margin: 0;
+      font-size: 13px;
+    }
+
+    h3 {
+      margin-top: 0;
+      color: #1a73e8;
+    }
+
+    .section {
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .section:last-child {
+      border-bottom: none;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+      color: #5f6368;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #1a73e8;
+    }
+
+    button {
+      padding: 8px 16px;
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    button:hover {
+      background-color: #1765cc;
+    }
+
+    button:disabled {
+      background-color: #dadce0;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background-color: #fff;
+      color: #1a73e8;
+      border: 1px solid #dadce0;
+    }
+
+    .btn-secondary:hover {
+      background-color: #f8f9fa;
+    }
+
+    .btn-danger {
+      background-color: #d93025;
+    }
+
+    .btn-danger:hover {
+      background-color: #c5221f;
+    }
+
+    .btn-success {
+      background-color: #1e8e3e;
+    }
+
+    .btn-success:hover {
+      background-color: #188038;
+    }
+
+    .btn-warning {
+      background-color: #f9ab00;
+    }
+
+    .btn-warning:hover {
+      background-color: #e37400;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .button-row button {
+      flex: 1;
+    }
+
+    .error {
+      color: #d93025;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .success {
+      color: #1e8e3e;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .loading {
+      color: #5f6368;
+      font-style: italic;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .appointment-list {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+
+    .appointment-item {
+      padding: 10px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .appointment-item:hover {
+      background-color: #f8f9fa;
+    }
+
+    .appointment-item.selected {
+      background-color: #e8f0fe;
+      border-color: #1a73e8;
+    }
+
+    .appointment-header {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .appointment-details {
+      font-size: 12px;
+      color: #5f6368;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+      margin-left: 8px;
+    }
+
+    .status-booked {
+      background-color: #e8f0fe;
+      color: #1a73e8;
+    }
+
+    .status-checked-in {
+      background-color: #fef7e0;
+      color: #f9ab00;
+    }
+
+    .status-completed {
+      background-color: #e6f4ea;
+      color: #1e8e3e;
+    }
+
+    .status-cancelled {
+      background-color: #fce8e6;
+      color: #d93025;
+    }
+
+    .status-no-show {
+      background-color: #f1f3f4;
+      color: #5f6368;
+    }
+
+    .status-rescheduled {
+      background-color: #e8eaed;
+      color: #5f6368;
+    }
+
+    #detailsView {
+      display: none;
+      margin-top: 15px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    #rescheduleView {
+      display: none;
+      margin-top: 15px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .detail-row {
+      margin-bottom: 8px;
+    }
+
+    .detail-label {
+      font-weight: 500;
+      color: #5f6368;
+      display: inline-block;
+      min-width: 80px;
+    }
+
+    .detail-value {
+      color: #202124;
+    }
+
+    #searchView {
+      display: block;
+    }
+
+    .time-slots-container {
+      margin-top: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .time-slot {
+      padding: 8px;
+      margin-bottom: 4px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .time-slot:hover {
+      background-color: #f1f3f4;
+    }
+
+    .time-slot.selected {
+      background-color: #e8f0fe;
+      border-color: #1a73e8;
+      font-weight: 500;
+    }
+
+    .back-link {
+      color: #1a73e8;
+      cursor: pointer;
+      margin-bottom: 10px;
+      display: none;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .no-results {
+      padding: 20px;
+      text-align: center;
+      color: #5f6368;
+    }
+  </style>
+</head>
+<body>
+  <h3>Manage Appointments</h3>
+
+  <div class="back-link" id="backLink" onclick="showSearchView()">← Back to search</div>
+
+  <!-- Search View -->
+  <div id="searchView">
+    <div class="section">
+      <label>Quick Access</label>
+      <button onclick="loadTodaysAppointments()" style="width: 100%;">View Today's Appointments</button>
+    </div>
+
+    <div class="section">
+      <div class="form-group">
+        <label>Search</label>
+        <input type="text" id="searchQuery" placeholder="Client name or appointment ID">
+      </div>
+
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="searchDate">
+      </div>
+
+      <div class="form-group">
+        <label>Provider</label>
+        <select id="searchProvider">
+          <option value="">All Providers</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Status</label>
+        <select id="searchStatus">
+          <option value="">All Statuses</option>
+          <option value="Booked">Booked</option>
+          <option value="Checked-in">Checked-in</option>
+          <option value="Completed">Completed</option>
+          <option value="Cancelled">Cancelled</option>
+          <option value="No-show">No-show</option>
+          <option value="Rescheduled">Rescheduled</option>
+        </select>
+      </div>
+
+      <div class="button-row">
+        <button onclick="searchAppointments()">Search</button>
+        <button class="btn-secondary" onclick="clearSearch()">Clear</button>
+      </div>
+
+      <div id="searchError" class="error"></div>
+    </div>
+
+    <!-- Results List -->
+    <div class="section">
+      <div id="resultsContainer"></div>
+    </div>
+  </div>
+
+  <!-- Details View -->
+  <div id="detailsView">
+    <div id="detailsContent"></div>
+    <div id="detailsError" class="error"></div>
+    <div id="detailsSuccess" class="success"></div>
+  </div>
+
+  <!-- Reschedule View -->
+  <div id="rescheduleView">
+    <h4 style="margin-top: 0;">Reschedule Appointment</h4>
+
+    <div id="rescheduleCurrentInfo" style="margin-bottom: 15px; padding: 10px; background-color: #fff; border-radius: 4px; font-size: 12px; color: #5f6368;">
+    </div>
+
+    <div class="form-group">
+      <label>New Date</label>
+      <input type="date" id="rescheduleDate">
+    </div>
+
+    <div class="form-group">
+      <label>Provider</label>
+      <select id="rescheduleProvider">
+        <option value="">Select Provider</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Service</label>
+      <select id="rescheduleService">
+        <option value="">Select Service</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Duration (minutes)</label>
+      <input type="number" id="rescheduleDuration" min="15" max="480" step="15" value="30">
+    </div>
+
+    <div class="form-group">
+      <button onclick="loadAvailableSlots()" style="width: 100%;">Check Available Times</button>
+    </div>
+
+    <div id="timeSlotsContainer"></div>
+
+    <div id="rescheduleError" class="error"></div>
+
+    <div class="button-row">
+      <button class="btn-success" onclick="submitReschedule()" id="rescheduleSubmitBtn" disabled>Reschedule</button>
+      <button class="btn-secondary" onclick="cancelReschedule()">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    var currentAppointment = null;
+    var allProviders = [];
+    var allServices = [];
+    var selectedTimeSlot = null;
+
+    // Initialize
+    window.onload = function() {
+      loadProviders();
+    };
+
+    function loadProviders() {
+      google.script.run
+        .withSuccessHandler(function(data) {
+          allProviders = data.providers;
+          allServices = data.services;
+          populateProviderDropdown();
+        })
+        .withFailureHandler(showError)
+        .getBookingFormData();
+    }
+
+    function populateProviderDropdown() {
+      var select = document.getElementById('searchProvider');
+      allProviders.forEach(function(provider) {
+        var option = document.createElement('option');
+        option.value = provider.provider_id;
+        option.textContent = provider.name;
+        select.appendChild(option);
+      });
+    }
+
+    function searchAppointments() {
+      var searchParams = {
+        query: document.getElementById('searchQuery').value,
+        date: document.getElementById('searchDate').value,
+        providerId: document.getElementById('searchProvider').value,
+        status: document.getElementById('searchStatus').value
+      };
+
+      document.getElementById('resultsContainer').innerHTML = '<div class="loading">Searching...</div>';
+      document.getElementById('searchError').textContent = '';
+
+      google.script.run
+        .withSuccessHandler(displayResults)
+        .withFailureHandler(function(error) {
+          document.getElementById('searchError').textContent = 'Error: ' + error.message;
+          document.getElementById('resultsContainer').innerHTML = '';
+        })
+        .searchAppointmentsForUI(searchParams);
+    }
+
+    function loadTodaysAppointments() {
+      document.getElementById('resultsContainer').innerHTML = '<div class="loading">Loading today\'s appointments...</div>';
+      document.getElementById('searchError').textContent = '';
+
+      google.script.run
+        .withSuccessHandler(displayResults)
+        .withFailureHandler(function(error) {
+          document.getElementById('searchError').textContent = 'Error: ' + error.message;
+          document.getElementById('resultsContainer').innerHTML = '';
+        })
+        .getTodaysAppointmentsForUI();
+    }
+
+    function displayResults(appointments) {
+      console.log('displayResults called with', appointments.length, 'appointments');
+      var container = document.getElementById('resultsContainer');
+
+      if (!appointments || appointments.length === 0) {
+        container.innerHTML = '<div class="no-results">No appointments found</div>';
+        return;
+      }
+
+      var html = '<div class="appointment-list">';
+      appointments.forEach(function(apt) {
+        console.log('Rendering appointment:', apt.appointment_id, 'Client:', apt.client.name, 'Service:', apt.service);
+        var statusClass = 'status-' + apt.status.toLowerCase().replace('-', '-');
+        html += '<div class="appointment-item" onclick="viewAppointmentDetails(\'' + apt.appointment_id + '\')" style="cursor: pointer;">';
+        html += '  <div class="appointment-header">';
+        html += '    ' + apt.client.name;
+        html += '    <span class="status-badge ' + statusClass + '">' + apt.status + '</span>';
+        html += '  </div>';
+        html += '  <div class="appointment-details">';
+        html += '    ' + apt.appointment_date + ' at ' + apt.start_time;
+        html += '    <br>' + apt.provider.name + ' - ' + apt.service.name + ' (' + apt.duration + ' min)';
+        html += '  </div>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      console.log('Setting resultsContainer HTML');
+      container.innerHTML = html;
+    }
+
+    function viewAppointmentDetails(appointmentId) {
+      console.log('viewAppointmentDetails called with ID:', appointmentId);
+      document.getElementById('detailsContent').innerHTML = '<div class="loading">Loading details...</div>';
+      document.getElementById('detailsError').textContent = '';
+      document.getElementById('detailsSuccess').textContent = '';
+
+      google.script.run
+        .withSuccessHandler(function(details) {
+          console.log('Got appointment details:', details);
+          if (!details) {
+            document.getElementById('detailsError').textContent = 'Appointment not found';
+            return;
+          }
+          currentAppointment = details;
+          displayAppointmentDetails(details);
+          showDetailsView();
+        })
+        .withFailureHandler(function(error) {
+          console.log('Error getting details:', error);
+          document.getElementById('detailsError').textContent = 'Error: ' + error.message;
+        })
+        .getAppointmentDetailsForUI(appointmentId);
+    }
+
+    function displayAppointmentDetails(details) {
+      var apt = details.appointment;
+      var statusClass = 'status-' + apt.status.toLowerCase().replace('-', '-');
+
+      var html = '<div class="detail-row">';
+      html += '  <span class="detail-label">Status:</span>';
+      html += '  <span class="status-badge ' + statusClass + '">' + apt.status + '</span>';
+      html += '</div>';
+
+      html += '<div class="detail-row">';
+      html += '  <span class="detail-label">Date:</span>';
+      html += '  <span class="detail-value">' + apt.appointment_date + '</span>';
+      html += '</div>';
+
+      html += '<div class="detail-row">';
+      html += '  <span class="detail-label">Time:</span>';
+      html += '  <span class="detail-value">' + apt.start_time + ' - ' + apt.end_time + ' (' + apt.duration + ' min)</span>';
+      html += '</div>';
+
+      html += '<div class="detail-row">';
+      html += '  <span class="detail-label">Client:</span>';
+      html += '  <span class="detail-value">' + details.client.name + '</span>';
+      html += '</div>';
+
+      html += '<div class="detail-row">';
+      html += '  <span class="detail-label">Phone:</span>';
+      html += '  <span class="detail-value">' + (details.client.phone || 'N/A') + '</span>';
+      html += '</div>';
+
+      html += '<div class="detail-row">';
+      html += '  <span class="detail-label">Email:</span>';
+      html += '  <span class="detail-value">' + (details.client.email || 'N/A') + '</span>';
+      html += '</div>';
+
+      html += '<div class="detail-row">';
+      html += '  <span class="detail-label">Provider:</span>';
+      html += '  <span class="detail-value">' + details.provider.name + '</span>';
+      html += '</div>';
+
+      html += '<div class="detail-row">';
+      html += '  <span class="detail-label">Service:</span>';
+      html += '  <span class="detail-value">' + details.service.name + '</span>';
+      html += '</div>';
+
+      if (apt.notes) {
+        html += '<div class="detail-row">';
+        html += '  <span class="detail-label">Notes:</span>';
+        html += '  <span class="detail-value">' + apt.notes + '</span>';
+        html += '</div>';
+      }
+
+      // Action buttons
+      html += '<div class="button-row">';
+
+      if (details.canCheckIn) {
+        html += '<button class="btn-success" onclick="checkInAppointment()">Check In</button>';
+      }
+
+      if (details.canComplete) {
+        html += '<button class="btn-success" onclick="completeAppointment()">Complete</button>';
+      }
+
+      html += '</div>';
+
+      html += '<div class="button-row">';
+
+      if (details.canReschedule) {
+        html += '<button class="btn-warning" onclick="rescheduleAppointment()">Reschedule</button>';
+      }
+
+      if (details.canMarkNoShow) {
+        html += '<button class="btn-warning" onclick="markNoShow()">Mark No-Show</button>';
+      }
+
+      html += '</div>';
+
+      html += '<div class="button-row">';
+
+      if (details.canCancel) {
+        html += '<button class="btn-danger" onclick="cancelAppointment()">Cancel</button>';
+      }
+
+      html += '</div>';
+
+      document.getElementById('detailsContent').innerHTML = html;
+    }
+
+    function checkInAppointment() {
+      if (!currentAppointment) return;
+
+      if (!confirm('Check in this appointment?')) return;
+
+      document.getElementById('detailsError').textContent = '';
+      document.getElementById('detailsSuccess').textContent = '';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            document.getElementById('detailsSuccess').textContent = 'Successfully checked in!';
+            setTimeout(function() {
+              viewAppointmentDetails(currentAppointment.appointment.appointment_id);
+            }, 1000);
+          } else {
+            document.getElementById('detailsError').textContent = result.error || result.message;
+          }
+        })
+        .withFailureHandler(function(error) {
+          document.getElementById('detailsError').textContent = 'Error: ' + error.message;
+        })
+        .checkInAppointmentFromUI(currentAppointment.appointment.appointment_id);
+    }
+
+    function completeAppointment() {
+      if (!currentAppointment) return;
+
+      var notes = prompt('Optional completion notes:');
+      if (notes === null) return; // User cancelled
+
+      document.getElementById('detailsError').textContent = '';
+      document.getElementById('detailsSuccess').textContent = '';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            document.getElementById('detailsSuccess').textContent = 'Appointment completed!';
+            setTimeout(function() {
+              viewAppointmentDetails(currentAppointment.appointment.appointment_id);
+            }, 1000);
+          } else {
+            document.getElementById('detailsError').textContent = result.error || result.message;
+          }
+        })
+        .withFailureHandler(function(error) {
+          document.getElementById('detailsError').textContent = 'Error: ' + error.message;
+        })
+        .completeAppointmentFromUI(currentAppointment.appointment.appointment_id, notes);
+    }
+
+    function markNoShow() {
+      if (!currentAppointment) return;
+
+      var notes = prompt('Optional notes about no-show:');
+      if (notes === null) return; // User cancelled
+
+      document.getElementById('detailsError').textContent = '';
+      document.getElementById('detailsSuccess').textContent = '';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            document.getElementById('detailsSuccess').textContent = 'Marked as no-show';
+            setTimeout(function() {
+              viewAppointmentDetails(currentAppointment.appointment.appointment_id);
+            }, 1000);
+          } else {
+            document.getElementById('detailsError').textContent = result.error || result.message;
+          }
+        })
+        .withFailureHandler(function(error) {
+          document.getElementById('detailsError').textContent = 'Error: ' + error.message;
+        })
+        .markNoShowFromUI(currentAppointment.appointment.appointment_id, notes);
+    }
+
+    function cancelAppointment() {
+      if (!currentAppointment) return;
+
+      var reason = prompt('Reason for cancellation:');
+      if (!reason) {
+        alert('Please provide a cancellation reason');
+        return;
+      }
+
+      document.getElementById('detailsError').textContent = '';
+      document.getElementById('detailsSuccess').textContent = '';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            document.getElementById('detailsSuccess').textContent = 'Appointment cancelled';
+            setTimeout(function() {
+              viewAppointmentDetails(currentAppointment.appointment.appointment_id);
+            }, 1000);
+          } else {
+            document.getElementById('detailsError').textContent = result.error || result.message;
+          }
+        })
+        .withFailureHandler(function(error) {
+          document.getElementById('detailsError').textContent = 'Error: ' + error.message;
+        })
+        .cancelAppointmentFromUI(currentAppointment.appointment.appointment_id, reason);
+    }
+
+    function rescheduleAppointment() {
+      if (!currentAppointment) return;
+
+      // Populate reschedule form with current appointment data
+      var apt = currentAppointment.appointment;
+
+      // Show current appointment info
+      var currentInfo = 'Current appointment:<br>';
+      currentInfo += '<strong>' + apt.appointment_date + ' at ' + apt.start_time + '</strong><br>';
+      currentInfo += currentAppointment.provider.name + ' - ' + currentAppointment.service.name;
+      currentInfo += ' (' + apt.duration + ' min)';
+      document.getElementById('rescheduleCurrentInfo').innerHTML = currentInfo;
+
+      // Pre-fill form with current values
+      document.getElementById('rescheduleDate').value = apt.appointment_date;
+      document.getElementById('rescheduleDuration').value = apt.duration;
+
+      // Populate provider dropdown
+      var providerSelect = document.getElementById('rescheduleProvider');
+      providerSelect.innerHTML = '<option value="">Select Provider</option>';
+      allProviders.forEach(function(provider) {
+        var option = document.createElement('option');
+        option.value = provider.provider_id;
+        option.textContent = provider.name;
+        if (provider.provider_id === apt.provider_id) {
+          option.selected = true;
+        }
+        providerSelect.appendChild(option);
+      });
+
+      // Populate service dropdown
+      var serviceSelect = document.getElementById('rescheduleService');
+      serviceSelect.innerHTML = '<option value="">Select Service</option>';
+      allServices.forEach(function(service) {
+        var option = document.createElement('option');
+        option.value = service.service_id;
+        option.textContent = service.name + ' (' + service.default_duration + ' min)';
+        if (service.service_id === apt.service_id) {
+          option.selected = true;
+        }
+        serviceSelect.appendChild(option);
+      });
+
+      // Clear previous selections
+      document.getElementById('timeSlotsContainer').innerHTML = '';
+      document.getElementById('rescheduleError').textContent = '';
+      selectedTimeSlot = null;
+      document.getElementById('rescheduleSubmitBtn').disabled = true;
+
+      // Show reschedule view
+      showRescheduleView();
+    }
+
+    function loadAvailableSlots() {
+      var date = document.getElementById('rescheduleDate').value;
+      var providerId = document.getElementById('rescheduleProvider').value;
+      var duration = parseInt(document.getElementById('rescheduleDuration').value);
+
+      if (!date || !providerId || !duration) {
+        document.getElementById('rescheduleError').textContent = 'Please select date, provider, and duration';
+        return;
+      }
+
+      document.getElementById('timeSlotsContainer').innerHTML = '<div class="loading">Loading available times...</div>';
+      document.getElementById('rescheduleError').textContent = '';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (!result.success) {
+            document.getElementById('timeSlotsContainer').innerHTML = '';
+            document.getElementById('rescheduleError').textContent = result.error || 'No available times';
+            return;
+          }
+
+          displayAvailableSlots(result.slots);
+        })
+        .withFailureHandler(function(error) {
+          document.getElementById('timeSlotsContainer').innerHTML = '';
+          document.getElementById('rescheduleError').textContent = 'Error: ' + error.message;
+        })
+        .getAvailableTimeSlots(providerId, date, duration);
+    }
+
+    function displayAvailableSlots(slots) {
+      var container = document.getElementById('timeSlotsContainer');
+
+      if (!slots || slots.length === 0) {
+        container.innerHTML = '<div class="no-results">No available time slots</div>';
+        return;
+      }
+
+      var html = '<label>Select New Time</label>';
+      html += '<div class="time-slots-container">';
+      slots.forEach(function(slot) {
+        html += '<div class="time-slot" onclick="selectTimeSlot(\'' + slot + '\')">';
+        html += slot;
+        html += '</div>';
+      });
+      html += '</div>';
+
+      container.innerHTML = html;
+    }
+
+    function selectTimeSlot(slot) {
+      selectedTimeSlot = slot;
+
+      // Update UI to show selected slot
+      var timeSlots = document.querySelectorAll('.time-slot');
+      timeSlots.forEach(function(element) {
+        if (element.textContent.trim() === slot) {
+          element.classList.add('selected');
+        } else {
+          element.classList.remove('selected');
+        }
+      });
+
+      // Enable submit button
+      document.getElementById('rescheduleSubmitBtn').disabled = false;
+      document.getElementById('rescheduleError').textContent = '';
+    }
+
+    function submitReschedule() {
+      if (!currentAppointment || !selectedTimeSlot) {
+        document.getElementById('rescheduleError').textContent = 'Please select a time slot';
+        return;
+      }
+
+      var newDate = document.getElementById('rescheduleDate').value;
+      var newProviderId = document.getElementById('rescheduleProvider').value;
+      var newServiceId = document.getElementById('rescheduleService').value;
+      var newDuration = parseInt(document.getElementById('rescheduleDuration').value);
+
+      if (!newDate || !newProviderId || !newServiceId || !newDuration) {
+        document.getElementById('rescheduleError').textContent = 'All fields are required';
+        return;
+      }
+
+      document.getElementById('rescheduleSubmitBtn').disabled = true;
+      document.getElementById('rescheduleError').textContent = '';
+
+      var options = {
+        newDate: newDate,
+        newStartTime: selectedTimeSlot,
+        newProviderId: newProviderId,
+        newServiceId: newServiceId,
+        newDuration: newDuration
+      };
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            alert('Appointment rescheduled successfully!');
+            showSearchView();
+            searchAppointments(); // Refresh the search results
+          } else {
+            document.getElementById('rescheduleError').textContent = result.error || result.message;
+            document.getElementById('rescheduleSubmitBtn').disabled = false;
+          }
+        })
+        .withFailureHandler(function(error) {
+          document.getElementById('rescheduleError').textContent = 'Error: ' + error.message;
+          document.getElementById('rescheduleSubmitBtn').disabled = false;
+        })
+        .rescheduleAppointmentFromUI(currentAppointment.appointment.appointment_id, options);
+    }
+
+    function cancelReschedule() {
+      showDetailsView();
+    }
+
+    function clearSearch() {
+      document.getElementById('searchQuery').value = '';
+      document.getElementById('searchDate').value = '';
+      document.getElementById('searchProvider').value = '';
+      document.getElementById('searchStatus').value = '';
+      document.getElementById('resultsContainer').innerHTML = '';
+      document.getElementById('searchError').textContent = '';
+    }
+
+    function showSearchView() {
+      document.getElementById('searchView').style.display = 'block';
+      document.getElementById('detailsView').style.display = 'none';
+      document.getElementById('rescheduleView').style.display = 'none';
+      document.getElementById('backLink').style.display = 'none';
+      currentAppointment = null;
+    }
+
+    function showDetailsView() {
+      document.getElementById('searchView').style.display = 'none';
+      document.getElementById('detailsView').style.display = 'block';
+      document.getElementById('rescheduleView').style.display = 'none';
+      document.getElementById('backLink').style.display = 'block';
+    }
+
+    function showRescheduleView() {
+      document.getElementById('searchView').style.display = 'none';
+      document.getElementById('detailsView').style.display = 'none';
+      document.getElementById('rescheduleView').style.display = 'block';
+      document.getElementById('backLink').style.display = 'block';
+    }
+
+    function showError(error) {
+      document.getElementById('searchError').textContent = 'Error: ' + error.message;
+    }
+  </script>
+</body>
+</html>

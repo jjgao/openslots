@@ -199,21 +199,22 @@ function findRecords(sheetName, criteria) {
  * Adds a new row to a sheet
  * @param {string} sheetName - Name of the sheet
  * @param {Array} rowData - Array of values for the new row (excluding auto-generated ID)
- * @returns {number} The row number of the new record, or -1 if failed
+ * @param {string} [customPrefix] - Optional custom ID prefix (overrides default)
+ * @returns {string} The generated ID, or null if failed
  */
-function addRow(sheetName, rowData) {
+function addRow(sheetName, rowData, customPrefix) {
   try {
     var sheet = getSheet(sheetName);
     if (!sheet) {
       Logger.log(`Sheet not found: ${sheetName}`);
-      return -1;
+      return null;
     }
 
     // Get the next row number
     var newRow = sheet.getLastRow() + 1;
 
     // Generate the ID directly in code (no formulas!)
-    var prefix = getIdPrefix(sheetName);
+    var prefix = customPrefix || getIdPrefix(sheetName);
     var idNumber = newRow - 1; // Subtract 1 for header row
     var newId = prefix + padNumber(idNumber, 3);
 
@@ -222,11 +223,11 @@ function addRow(sheetName, rowData) {
     sheet.getRange(newRow, 1, 1, fullRowData.length).setValues([fullRowData]);
 
     Logger.log(`Added row ${newRow} to ${sheetName} with ID ${newId}`);
-    return newRow;
+    return newId;
 
   } catch (error) {
     Logger.log(`Error adding row to ${sheetName}: ${error.toString()}`);
-    return -1;
+    return null;
   }
 }
 

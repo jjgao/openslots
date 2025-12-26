@@ -88,15 +88,10 @@ function bookAppointment(appointmentData) {
       '' // calendar_event_id - will be updated after calendar sync
     ];
 
-    var rowNum = addRow(SHEETS.APPOINTMENTS, rowData);
-    if (rowNum < 0) {
-      return { success: false, error: 'Failed to create appointment record' };
-    }
-
-    // Get the generated appointment ID
-    var appointmentId = getGeneratedId(SHEETS.APPOINTMENTS, rowNum);
+    // Add appointment row (returns generated ID directly)
+    var appointmentId = addRow(SHEETS.APPOINTMENTS, rowData);
     if (!appointmentId) {
-      return { success: false, error: 'Failed to generate appointment ID' };
+      return { success: false, error: 'Failed to create appointment record' };
     }
 
     // Step 7: Create calendar event (unless explicitly disabled)
@@ -131,7 +126,7 @@ function bookAppointment(appointmentData) {
         providerId: appointmentData.providerId,
         providerName: provider.name,
         serviceId: appointmentData.serviceId,
-        serviceName: service.service_name,
+        serviceName: service.name,
         date: appointmentData.date,
         startTime: appointmentData.startTime,
         endTime: endTime,

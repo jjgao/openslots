@@ -153,30 +153,25 @@ function testHeaderFormatting() {
 }
 
 /**
- * Test: Auto-increment formula
+ * Test: Auto-increment ID generation (code-based)
  */
 function testAutoIncrementFormula() {
-  var testName = 'Auto-increment Formula';
+  var testName = 'Auto-increment ID Generation';
 
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var testSheet = ss.insertSheet('TestAutoInc_' + Date.now());
+    var sheetName = testSheet.getName();
 
-    testSheet.appendRow(['id', 'name']);
-    addAutoIncrementFormula(testSheet, 'TEST', 'B');
+    // Create headers
+    testSheet.appendRow(['test_id', 'name']);
 
-    // Add test data
-    testSheet.getRange('B2').setValue('First Item');
-    testSheet.getRange('B3').setValue('Second Item');
-    testSheet.getRange('B4').setValue('Third Item');
+    // Test the addRow function which generates IDs
+    var id1 = addRow(sheetName, { name: 'First Item' }, 'TEST');
+    var id2 = addRow(sheetName, { name: 'Second Item' }, 'TEST');
+    var id3 = addRow(sheetName, { name: 'Third Item' }, 'TEST');
 
-    // Force recalculation
-    SpreadsheetApp.flush();
-
-    var id1 = testSheet.getRange('A2').getValue();
-    var id2 = testSheet.getRange('A3').getValue();
-    var id3 = testSheet.getRange('A4').getValue();
-
+    // Clean up
     ss.deleteSheet(testSheet);
 
     var isCorrect = id1 === 'TEST001' && id2 === 'TEST002' && id3 === 'TEST003';
@@ -186,13 +181,13 @@ function testAutoIncrementFormula() {
       passed: isCorrect,
       message: isCorrect
         ? 'IDs generated correctly: TEST001, TEST002, TEST003'
-        : `IDs incorrect: ${id1}, ${id2}, ${id3}`
+        : 'IDs incorrect: ' + id1 + ', ' + id2 + ', ' + id3
     };
   } catch (error) {
     return {
       name: testName,
       passed: false,
-      message: `Error: ${error.toString()}`
+      message: 'Error: ' + error.toString()
     };
   }
 }
@@ -1326,10 +1321,10 @@ function createTestAppointmentForManagement() {
 
   var result = bookAppointment(appointmentData);
   if (!result.success) {
-    throw new Error('Failed to create test appointment: ' + result.message);
+    throw new Error('Failed to create test appointment: ' + (result.error || result.message));
   }
 
-  return result.appointment_id;
+  return result.appointmentId;
 }
 
 /**
@@ -1880,9 +1875,505 @@ function runMvp4Tests() {
   // Complete tests
   results.push(testCompleteAppointment());
 
+  // Additional MVP4 tests based on issue #56
+  results.push(testCheckInTooEarly());
+  results.push(testCheckInTooLate());
+  results.push(testCheckInWithinGracePeriod());
+  results.push(testNoShowWithinGracePeriod());
+  results.push(testRescheduleToProviderWithoutService());
+  results.push(testRescheduleMultipleFields());
+  results.push(testUISearchFunctions());
+  results.push(testUIAppointmentDetails());
+  results.push(testActivityLogging());
+
   displayTestResults(results);
 
   Logger.log('========================================');
   Logger.log('MVP4 Test Suite Complete');
   Logger.log('========================================');
+}
+
+// ============================================================================
+// Additional MVP4 Tests (Based on Issue #56)
+// ============================================================================
+
+/**
+ * Test check-in too early (>1 hour before appointment)
+ */
+function testCheckInTooEarly() {
+  var testName = 'Check-in Too Early (>1hr before)';
+
+  try {
+    // Create test appointment (7 days in future by default)
+    var appointmentId = createTestAppointmentForManagement();
+
+    // Manually update to be 2 hours in future (too early to check in)
+    var futureTime = new Date();
+    futureTime.setHours(futureTime.getHours() + 2);
+    var dateStr = normalizeDate(futureTime);
+    var hours = futureTime.getHours();
+    var minutes = futureTime.getMinutes();
+    var timeStr = padZero(hours) + ':' + padZero(minutes);
+
+    updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
+      appointment_date: dateStr,
+      start_time: timeStr
+    });
+
+    // Try to check in (should fail - more than 1 hour before)
+    var checkInResult = checkInAppointment(appointmentId);
+
+    if (checkInResult.success) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Check-in should have failed (too early)' };
+    }
+
+    if (!checkInResult.message || checkInResult.message.indexOf('early') === -1) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Wrong error message: ' + (checkInResult.message || checkInResult.error || '') };
+    }
+
+    deleteTestAppointment(appointmentId);
+    return { name: testName, passed: true, message: 'Check-in correctly rejected (too early)' };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test check-in too late (>30 min after appointment start)
+ */
+function testCheckInTooLate() {
+  var testName = 'Check-in Too Late (>30min after start)';
+
+  try {
+    // Create test appointment
+    var appointmentId = createTestAppointmentForManagement();
+
+    // Manually update to be 45 minutes ago (too late to check in)
+    var pastTime = new Date();
+    pastTime.setMinutes(pastTime.getMinutes() - 45);
+    var dateStr = normalizeDate(pastTime);
+    var hours = pastTime.getHours();
+    var minutes = pastTime.getMinutes();
+    var timeStr = padZero(hours) + ':' + padZero(minutes);
+
+    updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
+      appointment_date: dateStr,
+      start_time: timeStr
+    });
+
+    // Try to check in (should fail - more than 30 min after start)
+    var checkInResult = checkInAppointment(appointmentId);
+
+    if (checkInResult.success) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Check-in should have failed (too late)' };
+    }
+
+    if (!checkInResult.message || checkInResult.message.indexOf('late') === -1) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Wrong error message: ' + (checkInResult.message || checkInResult.error || '') };
+    }
+
+    deleteTestAppointment(appointmentId);
+    return { name: testName, passed: true, message: 'Check-in correctly rejected (too late)' };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test check-in within grace period (1hr before to 30min after)
+ */
+function testCheckInWithinGracePeriod() {
+  var testName = 'Check-in Within Grace Period';
+
+  try {
+    // Create test appointment
+    var appointmentId = createTestAppointmentForManagement();
+
+    // Manually update to be 30 minutes from now (within check-in window)
+    var futureTime = new Date();
+    futureTime.setMinutes(futureTime.getMinutes() + 30);
+    var dateStr = normalizeDate(futureTime);
+    var hours = futureTime.getHours();
+    var minutes = futureTime.getMinutes();
+    var timeStr = padZero(hours) + ':' + padZero(minutes);
+
+    updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
+      appointment_date: dateStr,
+      start_time: timeStr
+    });
+
+    // Try to check in (should succeed - within 1 hour before)
+    var checkInResult = checkInAppointment(appointmentId);
+
+    if (!checkInResult.success) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Check-in should have succeeded: ' + (checkInResult.message || checkInResult.error || '') };
+    }
+
+    // Verify status changed
+    var appointment = getAppointmentById(appointmentId);
+    if (appointment.status !== 'Checked-in') {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Status should be Checked-in, got: ' + appointment.status };
+    }
+
+    deleteTestAppointment(appointmentId);
+    return { name: testName, passed: true, message: 'Check-in succeeded within grace period' };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test marking no-show within grace period (should fail)
+ */
+function testNoShowWithinGracePeriod() {
+  var testName = 'No-show Within Grace Period (should fail)';
+
+  try {
+    // Create test appointment
+    var appointmentId = createTestAppointmentForManagement();
+
+    // Manually update to be 15 minutes from now (within 30 min grace period)
+    var futureTime = new Date();
+    futureTime.setMinutes(futureTime.getMinutes() + 15);
+    var dateStr = normalizeDate(futureTime);
+    var hours = futureTime.getHours();
+    var minutes = futureTime.getMinutes();
+    var timeStr = padZero(hours) + ':' + padZero(minutes);
+
+    updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
+      appointment_date: dateStr,
+      start_time: timeStr
+    });
+
+    // Try to mark as no-show (should fail - within 30 min grace period)
+    var noShowResult = markNoShow(appointmentId);
+
+    if (noShowResult.success) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'No-show should have failed (within grace period)' };
+    }
+
+    var errorMsg = noShowResult.message || noShowResult.error || '';
+    if (errorMsg.indexOf('grace period') === -1 && errorMsg.indexOf('30 minutes') === -1) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Wrong error message: ' + errorMsg };
+    }
+
+    deleteTestAppointment(appointmentId);
+    return { name: testName, passed: true, message: 'No-show correctly rejected (within grace period)' };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test rescheduling to provider who doesn't offer the service
+ */
+function testRescheduleToProviderWithoutService() {
+  var testName = 'Reschedule to Provider Without Service';
+
+  try {
+    // Create test appointment
+    var appointmentId = createTestAppointmentForManagement();
+    var appointment = getAppointmentById(appointmentId);
+
+    // Get all providers to find one who doesn't offer the current service
+    var providers = getProviders(true);
+    var currentServiceId = appointment.service_id;
+
+    // Find a provider who doesn't offer the current service
+    var differentProviderId = null;
+    for (var i = 0; i < providers.length; i++) {
+      var provider = providers[i];
+      if (provider.provider_id !== appointment.provider_id) {
+        var servicesOffered = provider.services_offered ? provider.services_offered.split(',') : [];
+        var offersService = false;
+        for (var j = 0; j < servicesOffered.length; j++) {
+          if (servicesOffered[j].trim() === currentServiceId) {
+            offersService = true;
+            break;
+          }
+        }
+        if (!offersService) {
+          differentProviderId = provider.provider_id;
+          break;
+        }
+      }
+    }
+
+    if (!differentProviderId) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Could not find provider without service ' + currentServiceId };
+    }
+
+    // Try to reschedule to provider who doesn't offer this service
+    var rescheduleResult = rescheduleAppointment(appointmentId, {
+      newProviderId: differentProviderId
+    });
+
+    if (rescheduleResult.success) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Reschedule should have failed (provider does not offer service)' };
+    }
+
+    var errorMsg = rescheduleResult.message || rescheduleResult.error || '';
+    if (errorMsg.indexOf('does not offer') === -1) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Wrong error message: ' + errorMsg };
+    }
+
+    deleteTestAppointment(appointmentId);
+    return { name: testName, passed: true, message: 'Reschedule correctly rejected (provider does not offer service)' };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test rescheduling multiple fields at once (date + time + provider + service)
+ */
+function testRescheduleMultipleFields() {
+  var testName = 'Reschedule Multiple Fields';
+
+  try {
+    // Create test appointment
+    var appointmentId = createTestAppointmentForManagement();
+
+    // Get providers and services for reschedule
+    var providers = getProviders(true);
+    var services = getServices(true);
+
+    if (providers.length < 2 || services.length < 2) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Need at least 2 providers and 2 services for test' };
+    }
+
+    // Reschedule to different provider and service
+    var newProviderId = providers[1].provider_id;
+    var newServiceId = services[1].service_id;
+    var newDate = normalizeDate(addDays(new Date(), 14));
+
+    var rescheduleResult = rescheduleAppointment(appointmentId, {
+      newDate: newDate,
+      newStartTime: '14:00',
+      newProviderId: newProviderId,
+      newServiceId: newServiceId,
+      newDuration: 30
+    });
+
+    if (!rescheduleResult.success) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Reschedule failed: ' + (rescheduleResult.message || rescheduleResult.error) };
+    }
+
+    // Verify all fields changed
+    var appointment = getAppointmentById(appointmentId);
+
+    var errors = [];
+    if (appointment.appointment_date !== newDate) {
+      errors.push('Date not updated: ' + appointment.appointment_date + ' vs ' + newDate);
+    }
+    if (appointment.start_time !== '14:00') {
+      errors.push('Time not updated: ' + appointment.start_time);
+    }
+    if (appointment.provider_id !== newProviderId) {
+      errors.push('Provider not updated: ' + appointment.provider_id);
+    }
+    if (appointment.service_id !== newServiceId) {
+      errors.push('Service not updated: ' + appointment.service_id);
+    }
+    if (parseInt(appointment.duration) !== 30) {
+      errors.push('Duration not updated: ' + appointment.duration);
+    }
+
+    deleteTestAppointment(appointmentId);
+
+    if (errors.length > 0) {
+      return { name: testName, passed: false, message: errors.join('; ') };
+    }
+
+    return { name: testName, passed: true, message: 'All fields updated correctly' };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test UI search and filter functions
+ */
+function testUISearchFunctions() {
+  var testName = 'UI Search Functions';
+
+  try {
+    // Test searchAppointmentsForUI
+    var allResults = searchAppointmentsForUI({});
+    if (!Array.isArray(allResults)) {
+      return { name: testName, passed: false, message: 'searchAppointmentsForUI should return array' };
+    }
+
+    // Test search by query
+    var queryResults = searchAppointmentsForUI({ query: 'CLI001' });
+    if (!Array.isArray(queryResults)) {
+      return { name: testName, passed: false, message: 'Search by query should return array' };
+    }
+
+    // Test search by status
+    var statusResults = searchAppointmentsForUI({ status: 'Scheduled' });
+    if (!Array.isArray(statusResults)) {
+      return { name: testName, passed: false, message: 'Search by status should return array' };
+    }
+
+    // Verify results have required fields
+    if (allResults.length > 0) {
+      var firstResult = allResults[0];
+      if (!firstResult.appointment_id || !firstResult.client || !firstResult.provider || !firstResult.service) {
+        return { name: testName, passed: false, message: 'Search results missing required fields' };
+      }
+    }
+
+    // Test getTodaysAppointmentsForUI
+    var todayResults = getTodaysAppointmentsForUI();
+    if (!Array.isArray(todayResults)) {
+      return { name: testName, passed: false, message: 'getTodaysAppointmentsForUI should return array' };
+    }
+
+    return { name: testName, passed: true, message: 'All UI search functions work correctly' };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test UI appointment details function
+ */
+function testUIAppointmentDetails() {
+  var testName = 'UI Appointment Details';
+
+  try {
+    // Create test appointment
+    var appointmentId = createTestAppointmentForManagement();
+
+    // Get appointment details
+    var details = getAppointmentDetailsForUI(appointmentId);
+
+    if (!details) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'getAppointmentDetailsForUI returned null' };
+    }
+
+    // Verify structure
+    if (!details.appointment || !details.client || !details.provider || !details.service) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Details missing required fields' };
+    }
+
+    // Verify action permissions included
+    if (typeof details.canCancel === 'undefined' ||
+        typeof details.canReschedule === 'undefined' ||
+        typeof details.canCheckIn === 'undefined' ||
+        typeof details.canMarkNoShow === 'undefined' ||
+        typeof details.canComplete === 'undefined') {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Details missing action permissions' };
+    }
+
+    // For booked appointment, should be able to cancel and reschedule
+    if (!details.canCancel || !details.canReschedule) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Booked appointment should allow cancel and reschedule' };
+    }
+
+    deleteTestAppointment(appointmentId);
+    return { name: testName, passed: true, message: 'Appointment details include all required data and permissions' };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test activity logging for appointment operations
+ */
+function testActivityLogging() {
+  var testName = 'Activity Logging for Appointments';
+
+  try {
+    // Get initial log count
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var logSheet = ss.getSheetByName('Activity_Log');
+    var initialLogCount = logSheet.getLastRow() - 1; // Exclude header
+
+    // Create test appointment
+    var appointmentId = createTestAppointmentForManagement();
+
+    // Update to be 30 minutes from now so check-in works
+    var futureTime = new Date();
+    futureTime.setMinutes(futureTime.getMinutes() + 30);
+    var dateStr = normalizeDate(futureTime);
+    var hours = futureTime.getHours();
+    var minutes = futureTime.getMinutes();
+    var timeStr = padZero(hours) + ':' + padZero(minutes);
+
+    updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
+      appointment_date: dateStr,
+      start_time: timeStr
+    });
+
+    // Perform various operations that should log
+    rescheduleAppointment(appointmentId, { newStartTime: '11:00' });
+
+    // Update time again for check-in to work
+    updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
+      appointment_date: dateStr,
+      start_time: timeStr
+    });
+
+    checkInAppointment(appointmentId);
+    completeAppointment(appointmentId);
+
+    // Get final log count
+    var finalLogCount = logSheet.getLastRow() - 1;
+
+    // Should have at least 4 new log entries (book, reschedule, check-in, complete)
+    var newLogs = finalLogCount - initialLogCount;
+    if (newLogs < 4) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Expected at least 4 log entries, got: ' + newLogs };
+    }
+
+    // Verify log entries contain appointment ID
+    var logData = logSheet.getRange(2, 1, finalLogCount, logSheet.getLastColumn()).getValues();
+    var appointmentLogs = [];
+    for (var i = logData.length - 1; i >= 0 && appointmentLogs.length < 4; i--) {
+      var logEntry = logData[i];
+      var logAppointmentId = logEntry[2]; // Assuming column C is appointment_id
+      if (logAppointmentId === appointmentId) {
+        appointmentLogs.push(logEntry);
+      }
+    }
+
+    deleteTestAppointment(appointmentId);
+
+    if (appointmentLogs.length < 4) {
+      return { name: testName, passed: false, message: 'Expected 4 log entries with appointment ID, got: ' + appointmentLogs.length };
+    }
+
+    return { name: testName, passed: true, message: 'Activity logged correctly for all operations (' + newLogs + ' entries)' };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
 }

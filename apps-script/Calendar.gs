@@ -205,7 +205,7 @@ function createCalendarEvent(appointmentId) {
     }
 
     // Build event details
-    var eventTitle = buildEventTitle(service.service_name, client.name);
+    var eventTitle = buildEventTitle(service.name, client.name);
     var eventDescription = buildEventDescription(appointment, client, service);
     var startTime = combineDateAndTime(appointment.appointment_date, appointment.start_time);
     var endTime = combineDateAndTime(appointment.appointment_date, appointment.end_time);
@@ -282,7 +282,7 @@ function updateCalendarEvent(appointmentId) {
     }
 
     // Update event details
-    var eventTitle = buildEventTitle(service.service_name, client.name);
+    var eventTitle = buildEventTitle(service.name, client.name);
     var eventDescription = buildEventDescription(appointment, client, service);
     var startTime = combineDateAndTime(appointment.appointment_date, appointment.start_time);
     var endTime = combineDateAndTime(appointment.appointment_date, appointment.end_time);
@@ -566,7 +566,7 @@ function buildEventDescription(appointment, client, service) {
   }
 
   lines.push('');
-  lines.push(`Service: ${service.service_name}`);
+  lines.push(`Service: ${service.name}`);
   lines.push(`Duration: ${appointment.duration} minutes`);
   lines.push(`Status: ${appointment.status}`);
 

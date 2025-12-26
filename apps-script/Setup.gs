@@ -21,6 +21,7 @@ function onOpen() {
     .addItem('Add Sample Data', 'addSampleData')
     .addSeparator()
     .addItem('Book Appointment', 'showBookingSidebar')
+    .addItem('Manage Appointments', 'showAppointmentManagementSidebar')
     .addSeparator()
     .addSubMenu(ui.createMenu('Calendar')
       .addItem('Sync Missing Calendar Events', 'syncAllMissingCalendarEvents')
@@ -30,6 +31,7 @@ function onOpen() {
       .addItem('Remove Edit Trigger', 'removeOnEditTrigger'))
     .addSeparator()
     .addItem('Clear All Data', 'clearAllData')
+    .addItem('Validate Data', 'validateSystemData')
     .addSeparator()
     .addSubMenu(ui.createMenu('Tests')
       .addItem('Run All Tests', 'runAllTests')
@@ -37,6 +39,9 @@ function onOpen() {
       .addItem('Run MVP2 Tests', 'runMvp2Tests')
       .addItem('Run MVP3 Tests', 'runMvp3Tests')
       .addItem('Run MVP4 Tests', 'runMvp4Tests')
+      .addSeparator()
+      .addItem('Debug Appointments', 'debugAppointments')
+      .addItem('Debug Service Lookup', 'remoteDebugServiceLookup')
       .addSeparator()
       .addItem('Cleanup Test Sheets', 'cleanupTestSheets')
       .addItem('Cleanup Calendar Events', 'cleanupTestData'))
@@ -52,10 +57,12 @@ function showAbout() {
   var ui = SpreadsheetApp.getUi();
   ui.alert(
     'Appointment Booking System',
-    'Version: MVP 3.0 - Booking UI & Client Management\n\n' +
+    'Version: MVP 4.0 - Appointment Management\n\n' +
     'This system manages appointments for multiple service providers.\n\n' +
     'Features:\n' +
     '• Easy booking UI with client search\n' +
+    '• Appointment management UI with search and filtering\n' +
+    '• Check-in, complete, cancel, and no-show tracking\n' +
     '• Automatic calendar event creation\n' +
     '• Availability checking\n' +
     '• Double-booking prevention\n' +
@@ -187,7 +194,7 @@ function createServicesSheet() {
   deleteSheetIfExists(sheetName);
   var sheet = ss.insertSheet(sheetName);
 
-  var headers = ['service_id', 'service_name', 'default_duration_options', 'description'];
+  var headers = ['service_id', 'name', 'default_duration_options', 'description'];
   sheet.appendRow(headers);
 
   formatHeaderRow(sheet, headers.length);
@@ -197,7 +204,7 @@ function createServicesSheet() {
   // Example: "30|60" for 30 or 60 minute options
 
   sheet.setColumnWidth(1, 100);  // service_id
-  sheet.setColumnWidth(2, 180);  // service_name
+  sheet.setColumnWidth(2, 180);  // name
   sheet.setColumnWidth(3, 200);  // default_duration_options (pipe-delimited: "30|60")
   sheet.setColumnWidth(4, 300);  // description
 

@@ -55,9 +55,9 @@ function logActivity(logData) {
       logData.notes || ''
     ];
 
-    var rowNum = addRow(SHEETS.ACTIVITY_LOG, rowData);
+    var logId = addRow(SHEETS.ACTIVITY_LOG, rowData);
 
-    if (rowNum > 0) {
+    if (logId) {
       Logger.log(`Activity logged: ${logData.actionType} for ${logData.appointmentId || 'N/A'}`);
       return true;
     }

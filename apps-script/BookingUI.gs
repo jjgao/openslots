@@ -17,6 +17,17 @@ function showBookingSidebar() {
 }
 
 /**
+ * Shows the appointment management sidebar
+ */
+function showAppointmentManagementSidebar() {
+  var html = HtmlService.createHtmlOutputFromFile('AppointmentManagementSidebar')
+    .setTitle('Manage Appointments')
+    .setWidth(400);
+
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
  * Gets data for booking form (providers, services)
  * @returns {Object} Form data with providers and services
  */
@@ -310,20 +321,33 @@ function getClientDetails(clientId) {
  */
 function searchAppointmentsForUI(searchParams) {
   try {
+    Logger.log('searchAppointmentsForUI: Starting with params: ' + JSON.stringify(searchParams));
+
     var appointments = getAppointments();
+    Logger.log('searchAppointmentsForUI: Got ' + appointments.length + ' appointments');
+
     var clients = getClients();
+    Logger.log('searchAppointmentsForUI: Got ' + clients.length + ' clients');
+
     var providers = getProviders();
+    Logger.log('searchAppointmentsForUI: Got ' + providers.length + ' providers');
+
     var services = getServices();
+    Logger.log('searchAppointmentsForUI: Got ' + services.length + ' services');
 
     // Create lookup maps
     var clientMap = {};
     clients.forEach(function(c) { clientMap[c.client_id] = c; });
+    Logger.log('searchAppointmentsForUI: Created clientMap with ' + Object.keys(clientMap).length + ' entries');
 
     var providerMap = {};
     providers.forEach(function(p) { providerMap[p.provider_id] = p; });
+    Logger.log('searchAppointmentsForUI: Created providerMap with ' + Object.keys(providerMap).length + ' entries');
 
     var serviceMap = {};
     services.forEach(function(s) { serviceMap[s.service_id] = s; });
+    Logger.log('searchAppointmentsForUI: Created serviceMap with ' + Object.keys(serviceMap).length + ' entries');
+    Logger.log('searchAppointmentsForUI: Service IDs in map: ' + Object.keys(serviceMap).join(', '));
 
     // Filter appointments
     var results = appointments.filter(function(apt) {
@@ -339,9 +363,12 @@ function searchAppointmentsForUI(searchParams) {
         }
       }
 
-      // Filter by date
-      if (searchParams.date && apt.appointment_date !== searchParams.date) {
-        return false;
+      // Filter by date (normalize date to string for comparison)
+      if (searchParams.date) {
+        var aptDate = normalizeDate(apt.appointment_date);
+        if (aptDate !== searchParams.date) {
+          return false;
+        }
       }
 
       // Filter by provider
@@ -356,19 +383,38 @@ function searchAppointmentsForUI(searchParams) {
 
       return true;
     });
+    Logger.log('searchAppointmentsForUI: After filter, have ' + results.length + ' results');
 
     // Enhance results with related data
     var enhancedResults = results.map(function(apt) {
+      // Normalize date to string for sorting
+      var aptDate = normalizeDate(apt.appointment_date);
+
+      // Normalize start_time to string (HH:MM format)
+      var startTime = apt.start_time;
+      if (apt.start_time instanceof Date) {
+        var hours = apt.start_time.getHours();
+        var minutes = apt.start_time.getMinutes();
+        startTime = padZero(hours) + ':' + padZero(minutes);
+      }
+
+      // Debug service lookup
+      var service = serviceMap[apt.service_id];
+      if (!service) {
+        Logger.log('searchAppointmentsForUI: Service NOT FOUND for appointment ' + apt.appointment_id +
+                   ' with service_id: "' + apt.service_id + '" (type: ' + typeof apt.service_id + ')');
+      }
+
       return {
         appointment_id: apt.appointment_id,
-        appointment_date: apt.appointment_date,
-        start_time: apt.start_time,
+        appointment_date: aptDate,
+        start_time: startTime,
         duration: apt.duration,
         status: apt.status,
         notes: apt.notes || '',
         client: clientMap[apt.client_id] || {},
         provider: providerMap[apt.provider_id] || {},
-        service: serviceMap[apt.service_id] || {}
+        service: service || {}
       };
     });
 
@@ -380,10 +426,12 @@ function searchAppointmentsForUI(searchParams) {
       return b.start_time.localeCompare(a.start_time);
     });
 
+    Logger.log('searchAppointmentsForUI: Returning ' + enhancedResults.length + ' enhanced results');
     return enhancedResults;
 
   } catch (error) {
-    Logger.log('Error searching appointments: ' + error.toString());
+    Logger.log('ERROR in searchAppointmentsForUI: ' + error.toString());
+    Logger.log('ERROR stack: ' + error.stack);
     return [];
   }
 }
@@ -453,16 +501,28 @@ function completeAppointmentFromUI(appointmentId, notes) {
  */
 function getAppointmentDetailsForUI(appointmentId) {
   try {
+    Logger.log('getAppointmentDetailsForUI: Looking for appointment: ' + appointmentId);
+
     var appointment = getAppointmentById(appointmentId);
+    Logger.log('getAppointmentDetailsForUI: getAppointmentById returned: ' + (appointment ? 'found' : 'NULL'));
+
     if (!appointment) {
+      Logger.log('getAppointmentDetailsForUI: Appointment not found, returning null');
       return null;
     }
 
-    var client = getClient(appointment.client_id);
-    var provider = getProvider(appointment.provider_id);
-    var service = getService(appointment.service_id);
+    Logger.log('getAppointmentDetailsForUI: Appointment status: ' + appointment.status);
 
-    return {
+    var client = getClient(appointment.client_id);
+    Logger.log('getAppointmentDetailsForUI: Client found: ' + (client ? client.name : 'NULL'));
+
+    var provider = getProvider(appointment.provider_id);
+    Logger.log('getAppointmentDetailsForUI: Provider found: ' + (provider ? provider.name : 'NULL'));
+
+    var service = getService(appointment.service_id);
+    Logger.log('getAppointmentDetailsForUI: Service found: ' + (service ? service.name : 'NULL'));
+
+    var result = {
       appointment: appointment,
       client: client,
       provider: provider,
@@ -474,8 +534,12 @@ function getAppointmentDetailsForUI(appointmentId) {
       canComplete: canTransitionTo(appointment.status, 'Completed')
     };
 
+    Logger.log('getAppointmentDetailsForUI: Returning result with canCancel=' + result.canCancel);
+    return result;
+
   } catch (error) {
-    Logger.log('Error getting appointment details: ' + error.toString());
+    Logger.log('ERROR in getAppointmentDetailsForUI: ' + error.toString());
+    Logger.log('ERROR stack: ' + error.stack);
     return null;
   }
 }

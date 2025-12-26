@@ -98,20 +98,15 @@ function createClient(clientData) {
     ''                                 // last_visit (will be set on appointments)
   ];
 
-  // Add row to Clients sheet
-  var rowNum = addRow(SHEETS.CLIENTS, rowData);
+  // Add row to Clients sheet (returns generated ID)
+  var clientId = addRow(SHEETS.CLIENTS, rowData);
 
-  if (rowNum === -1) {
+  if (!clientId) {
     return {
       success: false,
       error: 'Failed to add client to sheet'
     };
   }
-
-  // Get the auto-generated client ID
-  SpreadsheetApp.flush();
-  Utilities.sleep(500); // Small delay to ensure formula calculation
-  var clientId = getGeneratedId(SHEETS.CLIENTS, rowNum);
 
   if (!clientId) {
     return {
