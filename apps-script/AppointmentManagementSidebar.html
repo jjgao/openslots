@@ -460,9 +460,22 @@
     </div>
   </div>
 
+  <!-- Custom Prompt Modal -->
+  <div id="promptModal" class="modal-overlay">
+    <div class="modal-dialog">
+      <div class="modal-title" id="promptTitle">Input Required</div>
+      <div class="modal-message" id="promptMessage"></div>
+      <textarea id="promptInput" style="width: 100%; padding: 8px; border: 1px solid #dadce0; border-radius: 4px; font-size: 13px; font-family: Arial, sans-serif; resize: vertical; min-height: 60px; box-sizing: border-box; margin-bottom: 20px;"></textarea>
+      <div class="modal-buttons">
+        <button class="btn-secondary" onclick="closePromptModal(null)">Cancel</button>
+        <button id="promptBtn" onclick="closePromptModal(document.getElementById('promptInput').value)">OK</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // VERSION TRACKING - Increment this when making changes
-    var HTML_VERSION = 'v1.1.3';
+    var HTML_VERSION = 'v1.1.4';
 
     var currentAppointment = null;
     var allProviders = [];
@@ -470,6 +483,7 @@
     var selectedTimeSlot = null;
     var cachedAppointments = {}; // Store appointments from search results
     var confirmCallback = null; // Callback for confirmation modal
+    var promptCallback = null; // Callback for prompt modal
 
     // Status transition rules (must match server-side VALID_STATUS_TRANSITIONS)
     var VALID_STATUS_TRANSITIONS = {
@@ -525,6 +539,55 @@
       if (confirmCallback) {
         confirmCallback(confirmed);
         confirmCallback = null;
+      }
+    }
+
+    // Custom prompt modal functions
+    function showPromptModal(title, message, callback, placeholder, buttonText, buttonClass, required) {
+      promptCallback = callback;
+      document.getElementById('promptTitle').textContent = title || 'Input Required';
+      document.getElementById('promptMessage').textContent = message || '';
+
+      var input = document.getElementById('promptInput');
+      input.value = '';
+      input.placeholder = placeholder || '';
+      input.dataset.required = required || false;
+
+      var promptBtn = document.getElementById('promptBtn');
+      promptBtn.textContent = buttonText || 'OK';
+      promptBtn.className = buttonClass || 'btn-success';
+
+      document.getElementById('promptModal').classList.add('active');
+
+      // Focus on input field
+      setTimeout(function() {
+        input.focus();
+      }, 100);
+    }
+
+    function closePromptModal(value) {
+      var input = document.getElementById('promptInput');
+      var required = input.dataset.required === 'true';
+
+      // If required and value is empty/null, show error
+      if (required && (value === null || !value.trim())) {
+        if (value !== null) { // Only show error if they clicked OK, not Cancel
+          showConfirmModal('Input Required', 'Please provide a value.', function() {}, 'OK', 'btn-secondary');
+        } else {
+          // User clicked Cancel
+          document.getElementById('promptModal').classList.remove('active');
+          if (promptCallback) {
+            promptCallback(null);
+            promptCallback = null;
+          }
+        }
+        return;
+      }
+
+      document.getElementById('promptModal').classList.remove('active');
+      if (promptCallback) {
+        promptCallback(value);
+        promptCallback = null;
       }
     }
 
@@ -797,27 +860,30 @@
 
       var client = currentAppointment.client;
       var apt = currentAppointment.appointment;
-      var notes = prompt('Complete appointment for ' + client.name + ' at ' + apt.start_time + '\n\nOptional completion notes:');
-      if (notes === null) return; // User cancelled
+      var message = 'Complete appointment for ' + client.name + ' at ' + apt.start_time;
 
-      document.getElementById('detailsError').textContent = '';
-      document.getElementById('detailsSuccess').textContent = '';
+      showPromptModal('Complete Appointment', message, function(notes) {
+        if (notes === null) return; // User cancelled
 
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.success) {
-            document.getElementById('detailsSuccess').textContent = 'Appointment completed!';
-            setTimeout(function() {
-              viewAppointmentDetails(currentAppointment.appointment.appointment_id);
-            }, 1000);
-          } else {
-            document.getElementById('detailsError').textContent = result.error || result.message;
-          }
-        })
-        .withFailureHandler(function(error) {
-          document.getElementById('detailsError').textContent = 'Error: ' + error.message;
-        })
-        .completeAppointmentFromUI(currentAppointment.appointment.appointment_id, notes);
+        document.getElementById('detailsError').textContent = '';
+        document.getElementById('detailsSuccess').textContent = '';
+
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.success) {
+              document.getElementById('detailsSuccess').textContent = 'Appointment completed!';
+              setTimeout(function() {
+                viewAppointmentDetails(currentAppointment.appointment.appointment_id);
+              }, 1000);
+            } else {
+              document.getElementById('detailsError').textContent = result.error || result.message;
+            }
+          })
+          .withFailureHandler(function(error) {
+            document.getElementById('detailsError').textContent = 'Error: ' + error.message;
+          })
+          .completeAppointmentFromUI(currentAppointment.appointment.appointment_id, notes);
+      }, 'Optional completion notes...', 'Complete', 'btn-success', false);
     }
 
     function markNoShow() {
@@ -825,27 +891,30 @@
 
       var client = currentAppointment.client;
       var apt = currentAppointment.appointment;
-      var notes = prompt('Mark ' + client.name + ' (' + apt.start_time + ') as no-show?\n\nOptional notes:');
-      if (notes === null) return; // User cancelled
+      var message = 'Mark ' + client.name + ' (' + apt.start_time + ') as no-show?';
 
-      document.getElementById('detailsError').textContent = '';
-      document.getElementById('detailsSuccess').textContent = '';
+      showPromptModal('Mark No-Show', message, function(notes) {
+        if (notes === null) return; // User cancelled
 
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.success) {
-            document.getElementById('detailsSuccess').textContent = 'Marked as no-show';
-            setTimeout(function() {
-              viewAppointmentDetails(currentAppointment.appointment.appointment_id);
-            }, 1000);
-          } else {
-            document.getElementById('detailsError').textContent = result.error || result.message;
-          }
-        })
-        .withFailureHandler(function(error) {
-          document.getElementById('detailsError').textContent = 'Error: ' + error.message;
-        })
-        .markNoShowFromUI(currentAppointment.appointment.appointment_id, notes);
+        document.getElementById('detailsError').textContent = '';
+        document.getElementById('detailsSuccess').textContent = '';
+
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.success) {
+              document.getElementById('detailsSuccess').textContent = 'Marked as no-show';
+              setTimeout(function() {
+                viewAppointmentDetails(currentAppointment.appointment.appointment_id);
+              }, 1000);
+            } else {
+              document.getElementById('detailsError').textContent = result.error || result.message;
+            }
+          })
+          .withFailureHandler(function(error) {
+            document.getElementById('detailsError').textContent = 'Error: ' + error.message;
+          })
+          .markNoShowFromUI(currentAppointment.appointment.appointment_id, notes);
+      }, 'Optional notes...', 'Mark No-Show', 'btn-warning', false);
     }
 
     function cancelAppointment() {
@@ -853,31 +922,30 @@
 
       var client = currentAppointment.client;
       var apt = currentAppointment.appointment;
-      var reason = prompt('Cancel appointment for ' + client.name + ' at ' + apt.start_time + '?\n\nReason for cancellation:');
-      if (reason === null) return; // User cancelled
-      if (!reason.trim()) {
-        showConfirmModal('Cancellation Reason Required', 'Please provide a reason for cancellation.', function() {}, 'OK', 'btn-secondary');
-        return;
-      }
+      var message = 'Cancel appointment for ' + client.name + ' at ' + apt.start_time + '?';
 
-      document.getElementById('detailsError').textContent = '';
-      document.getElementById('detailsSuccess').textContent = '';
+      showPromptModal('Cancel Appointment', message, function(reason) {
+        if (reason === null) return; // User cancelled
 
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.success) {
-            document.getElementById('detailsSuccess').textContent = 'Appointment cancelled';
-            setTimeout(function() {
-              viewAppointmentDetails(currentAppointment.appointment.appointment_id);
-            }, 1000);
-          } else {
-            document.getElementById('detailsError').textContent = result.error || result.message;
-          }
-        })
-        .withFailureHandler(function(error) {
-          document.getElementById('detailsError').textContent = 'Error: ' + error.message;
-        })
-        .cancelAppointmentFromUI(currentAppointment.appointment.appointment_id, reason);
+        document.getElementById('detailsError').textContent = '';
+        document.getElementById('detailsSuccess').textContent = '';
+
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.success) {
+              document.getElementById('detailsSuccess').textContent = 'Appointment cancelled';
+              setTimeout(function() {
+                viewAppointmentDetails(currentAppointment.appointment.appointment_id);
+              }, 1000);
+            } else {
+              document.getElementById('detailsError').textContent = result.error || result.message;
+            }
+          })
+          .withFailureHandler(function(error) {
+            document.getElementById('detailsError').textContent = 'Error: ' + error.message;
+          })
+          .cancelAppointmentFromUI(currentAppointment.appointment.appointment_id, reason);
+      }, 'Reason for cancellation (required)', 'Cancel', 'btn-danger', true);
     }
 
     function rescheduleAppointment() {
