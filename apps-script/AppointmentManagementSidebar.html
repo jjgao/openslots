@@ -399,7 +399,7 @@
 
   <script>
     // VERSION TRACKING - Increment this when making changes
-    var HTML_VERSION = 'v1.1.0';
+    var HTML_VERSION = 'v1.1.1';
 
     var currentAppointment = null;
     var allProviders = [];
@@ -422,6 +422,25 @@
     function canTransitionTo(currentStatus, newStatus) {
       var allowedTransitions = VALID_STATUS_TRANSITIONS[currentStatus];
       return allowedTransitions && allowedTransitions.indexOf(newStatus) !== -1;
+    }
+
+    // Helper function to calculate end time from start time and duration
+    function calculateEndTime(startTime, durationMinutes) {
+      if (!startTime || !durationMinutes) return '';
+
+      // Parse start time (HH:MM format)
+      var parts = startTime.split(':');
+      var hours = parseInt(parts[0], 10);
+      var minutes = parseInt(parts[1], 10);
+
+      // Add duration
+      minutes += parseInt(durationMinutes, 10);
+      hours += Math.floor(minutes / 60);
+      minutes = minutes % 60;
+      hours = hours % 24;
+
+      // Format as HH:MM
+      return (hours < 10 ? '0' : '') + hours + ':' + (minutes < 10 ? '0' : '') + minutes;
     }
 
     // Initialize
@@ -583,9 +602,10 @@
       html += '  <span class="detail-value">' + apt.appointment_date + '</span>';
       html += '</div>';
 
+      var endTime = calculateEndTime(apt.start_time, apt.duration);
       html += '<div class="detail-row">';
       html += '  <span class="detail-label">Time:</span>';
-      html += '  <span class="detail-value">' + apt.start_time + ' - ' + apt.end_time + ' (' + apt.duration + ' min)</span>';
+      html += '  <span class="detail-value">' + apt.start_time + ' - ' + endTime + ' (' + apt.duration + ' min)</span>';
       html += '</div>';
 
       html += '<div class="detail-row">';
