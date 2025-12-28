@@ -264,6 +264,57 @@
       background-color: #f1f3f4;
     }
 
+    /* Custom confirmation modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-dialog {
+      background-color: white;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: #202124;
+      margin-bottom: 12px;
+    }
+
+    .modal-message {
+      font-size: 13px;
+      color: #5f6368;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .modal-buttons button {
+      min-width: 80px;
+    }
+
     .time-slot.selected {
       background-color: #e8f0fe;
       border-color: #1a73e8;
@@ -397,15 +448,28 @@
     </div>
   </div>
 
+  <!-- Custom Confirmation Modal -->
+  <div id="confirmModal" class="modal-overlay">
+    <div class="modal-dialog">
+      <div class="modal-title" id="confirmTitle">Confirm Action</div>
+      <div class="modal-message" id="confirmMessage"></div>
+      <div class="modal-buttons">
+        <button class="btn-secondary" onclick="closeConfirmModal(false)">Cancel</button>
+        <button id="confirmBtn" onclick="closeConfirmModal(true)">OK</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // VERSION TRACKING - Increment this when making changes
-    var HTML_VERSION = 'v1.1.2';
+    var HTML_VERSION = 'v1.1.3';
 
     var currentAppointment = null;
     var allProviders = [];
     var allServices = [];
     var selectedTimeSlot = null;
     var cachedAppointments = {}; // Store appointments from search results
+    var confirmCallback = null; // Callback for confirmation modal
 
     // Status transition rules (must match server-side VALID_STATUS_TRANSITIONS)
     var VALID_STATUS_TRANSITIONS = {
@@ -441,6 +505,27 @@
 
       // Format as HH:MM
       return (hours < 10 ? '0' : '') + hours + ':' + (minutes < 10 ? '0' : '') + minutes;
+    }
+
+    // Custom confirmation modal functions
+    function showConfirmModal(title, message, callback, buttonText, buttonClass) {
+      confirmCallback = callback;
+      document.getElementById('confirmTitle').textContent = title || 'Confirm Action';
+      document.getElementById('confirmMessage').textContent = message || '';
+
+      var confirmBtn = document.getElementById('confirmBtn');
+      confirmBtn.textContent = buttonText || 'OK';
+      confirmBtn.className = buttonClass || 'btn-success';
+
+      document.getElementById('confirmModal').classList.add('active');
+    }
+
+    function closeConfirmModal(confirmed) {
+      document.getElementById('confirmModal').classList.remove('active');
+      if (confirmCallback) {
+        confirmCallback(confirmed);
+        confirmCallback = null;
+      }
     }
 
     // Initialize
@@ -683,26 +768,28 @@
       var client = currentAppointment.client;
       var message = 'Check in ' + client.name + ' for their appointment at ' + apt.start_time + '?';
 
-      if (!confirm(message)) return;
+      showConfirmModal('Check In', message, function(confirmed) {
+        if (!confirmed) return;
 
-      document.getElementById('detailsError').textContent = '';
-      document.getElementById('detailsSuccess').textContent = '';
+        document.getElementById('detailsError').textContent = '';
+        document.getElementById('detailsSuccess').textContent = '';
 
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.success) {
-            document.getElementById('detailsSuccess').textContent = 'Successfully checked in!';
-            setTimeout(function() {
-              viewAppointmentDetails(currentAppointment.appointment.appointment_id);
-            }, 1000);
-          } else {
-            document.getElementById('detailsError').textContent = result.error || result.message;
-          }
-        })
-        .withFailureHandler(function(error) {
-          document.getElementById('detailsError').textContent = 'Error: ' + error.message;
-        })
-        .checkInAppointmentFromUI(currentAppointment.appointment.appointment_id);
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.success) {
+              document.getElementById('detailsSuccess').textContent = 'Successfully checked in!';
+              setTimeout(function() {
+                viewAppointmentDetails(currentAppointment.appointment.appointment_id);
+              }, 1000);
+            } else {
+              document.getElementById('detailsError').textContent = result.error || result.message;
+            }
+          })
+          .withFailureHandler(function(error) {
+            document.getElementById('detailsError').textContent = 'Error: ' + error.message;
+          })
+          .checkInAppointmentFromUI(currentAppointment.appointment.appointment_id);
+      }, 'Check In', 'btn-success');
     }
 
     function completeAppointment() {
@@ -767,8 +854,9 @@
       var client = currentAppointment.client;
       var apt = currentAppointment.appointment;
       var reason = prompt('Cancel appointment for ' + client.name + ' at ' + apt.start_time + '?\n\nReason for cancellation:');
-      if (!reason) {
-        alert('Please provide a cancellation reason');
+      if (reason === null) return; // User cancelled
+      if (!reason.trim()) {
+        showConfirmModal('Cancellation Reason Required', 'Please provide a reason for cancellation.', function() {}, 'OK', 'btn-secondary');
         return;
       }
 
