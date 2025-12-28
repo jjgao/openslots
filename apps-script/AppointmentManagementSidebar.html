@@ -399,7 +399,7 @@
 
   <script>
     // VERSION TRACKING - Increment this when making changes
-    var HTML_VERSION = 'v1.1.1';
+    var HTML_VERSION = 'v1.1.2';
 
     var currentAppointment = null;
     var allProviders = [];
@@ -679,7 +679,11 @@
     function checkInAppointment() {
       if (!currentAppointment) return;
 
-      if (!confirm('Check in this appointment?')) return;
+      var apt = currentAppointment.appointment;
+      var client = currentAppointment.client;
+      var message = 'Check in ' + client.name + ' for their appointment at ' + apt.start_time + '?';
+
+      if (!confirm(message)) return;
 
       document.getElementById('detailsError').textContent = '';
       document.getElementById('detailsSuccess').textContent = '';
@@ -704,7 +708,9 @@
     function completeAppointment() {
       if (!currentAppointment) return;
 
-      var notes = prompt('Optional completion notes:');
+      var client = currentAppointment.client;
+      var apt = currentAppointment.appointment;
+      var notes = prompt('Complete appointment for ' + client.name + ' at ' + apt.start_time + '\n\nOptional completion notes:');
       if (notes === null) return; // User cancelled
 
       document.getElementById('detailsError').textContent = '';
@@ -730,7 +736,9 @@
     function markNoShow() {
       if (!currentAppointment) return;
 
-      var notes = prompt('Optional notes about no-show:');
+      var client = currentAppointment.client;
+      var apt = currentAppointment.appointment;
+      var notes = prompt('Mark ' + client.name + ' (' + apt.start_time + ') as no-show?\n\nOptional notes:');
       if (notes === null) return; // User cancelled
 
       document.getElementById('detailsError').textContent = '';
@@ -756,7 +764,9 @@
     function cancelAppointment() {
       if (!currentAppointment) return;
 
-      var reason = prompt('Reason for cancellation:');
+      var client = currentAppointment.client;
+      var apt = currentAppointment.appointment;
+      var reason = prompt('Cancel appointment for ' + client.name + ' at ' + apt.start_time + '?\n\nReason for cancellation:');
       if (!reason) {
         alert('Please provide a cancellation reason');
         return;
