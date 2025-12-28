@@ -8,14 +8,22 @@
  * Parses a date string in the script's timezone to avoid UTC midnight issues.
  * new Date('YYYY-MM-DD') parses as UTC midnight, which shifts to previous day
  * in western timezones. This function parses in local timezone.
- * @param {string} dateStr - Date string in YYYY-MM-DD format
+ * @param {string|Date} dateStr - Date string in YYYY-MM-DD format or Date object
  * @returns {Date} Date object at midnight in script timezone
  */
 function parseDateInTimezone(dateStr) {
   if (!dateStr) {
     return new Date();
   }
-  // Parse as noon to avoid any DST edge cases, then we only care about the date portion
+
+  // If already a Date object, return a copy at noon to avoid DST issues
+  if (dateStr instanceof Date) {
+    var date = new Date(dateStr);
+    date.setHours(12, 0, 0, 0);
+    return date;
+  }
+
+  // Parse string as noon to avoid any DST edge cases
   return Utilities.parseDate(dateStr + ' 12:00:00', Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
 }
 
