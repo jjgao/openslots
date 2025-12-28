@@ -42,6 +42,7 @@ function onOpen() {
       .addSeparator()
       .addItem('Debug Appointments', 'debugAppointments')
       .addItem('Debug Service Lookup', 'remoteDebugServiceLookup')
+      .addItem('Show Appointment Details', 'showAppointmentDetailsInAlert')
       .addSeparator()
       .addItem('Cleanup Test Sheets', 'cleanupTestSheets')
       .addItem('Cleanup Calendar Events', 'cleanupTestData'))

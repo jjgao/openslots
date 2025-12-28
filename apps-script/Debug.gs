@@ -66,3 +66,106 @@ function debugAppointments() {
     ui.ButtonSet.OK
   );
 }
+
+/**
+ * Debug: Show appointment details in UI alert
+ * This bypasses the browser/HTML and shows results directly
+ */
+function showAppointmentDetailsInAlert() {
+  var ui = SpreadsheetApp.getUi();
+
+  // Prompt for appointment ID
+  var response = ui.prompt(
+    'Debug Appointment Details',
+    'Enter appointment ID (e.g., APT001):',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  var appointmentId = response.getResponseText().trim();
+
+  // Get appointment details using the same function the UI uses
+  var details = getAppointmentDetailsForUI(appointmentId);
+
+  if (!details) {
+    ui.alert('Error', 'Appointment not found: ' + appointmentId, ui.ButtonSet.OK);
+    return;
+  }
+
+  // Build message showing all details
+  var msg = 'Appointment: ' + appointmentId + '\n\n';
+  msg += 'STATUS: ' + details.appointment.status + '\n';
+  msg += 'Client: ' + details.client.name + '\n';
+  msg += 'Provider: ' + details.provider.name + '\n';
+  msg += 'Service: ' + details.service.name + '\n';
+  msg += 'Date: ' + details.appointment.appointment_date + '\n';
+  msg += 'Time: ' + details.appointment.start_time + '\n\n';
+
+  msg += '=== PERMISSION FLAGS ===\n';
+  msg += 'canCheckIn: ' + details.canCheckIn + '\n';
+  msg += 'canComplete: ' + details.canComplete + '\n';
+  msg += 'canReschedule: ' + details.canReschedule + '\n';
+  msg += 'canMarkNoShow: ' + details.canMarkNoShow + '\n';
+  msg += 'canCancel: ' + details.canCancel + '\n\n';
+
+  msg += 'Types:\n';
+  msg += 'canCheckIn type: ' + typeof details.canCheckIn + '\n';
+  msg += 'canCancel type: ' + typeof details.canCancel;
+
+  ui.alert('Appointment Details', msg, ui.ButtonSet.OK);
+}
+
+/**
+ * Debug: Check appointment status and button permissions
+ * Run this from Apps Script editor to see why buttons aren't showing
+ */
+function debugAppointmentButtons() {
+  var appointments = getAppointments();
+
+  if (appointments.length === 0) {
+    Logger.log('No appointments found!');
+    return;
+  }
+
+  Logger.log('=== APPOINTMENT BUTTON DEBUG ===');
+  Logger.log('Checking first 5 appointments:\n');
+
+  for (var i = 0; i < Math.min(5, appointments.length); i++) {
+    var apt = appointments[i];
+    Logger.log('--- Appointment ' + (i + 1) + ': ' + apt.appointment_id + ' ---');
+    Logger.log('Status: "' + apt.status + '" (length: ' + apt.status.length + ')');
+    Logger.log('Status type: ' + typeof apt.status);
+
+    // Check what transitions are allowed
+    var allowedTransitions = VALID_STATUS_TRANSITIONS[apt.status];
+    Logger.log('Allowed transitions: ' + (allowedTransitions ? JSON.stringify(allowedTransitions) : 'NONE - STATUS NOT RECOGNIZED'));
+
+    // Check each button permission
+    Logger.log('  canCancel: ' + canTransitionTo(apt.status, 'Cancelled'));
+    Logger.log('  canReschedule: ' + canTransitionTo(apt.status, 'Rescheduled'));
+    Logger.log('  canCheckIn: ' + canTransitionTo(apt.status, 'Checked-in'));
+    Logger.log('  canMarkNoShow: ' + canTransitionTo(apt.status, 'No-show'));
+    Logger.log('  canComplete: ' + canTransitionTo(apt.status, 'Completed'));
+    Logger.log('');
+  }
+
+  Logger.log('=== VALID STATUS VALUES ===');
+  Logger.log('Expected statuses: ' + Object.keys(VALID_STATUS_TRANSITIONS).join(', '));
+
+  // Show results in UI
+  var ui = SpreadsheetApp.getUi();
+  var firstApt = appointments[0];
+  var allowedForFirst = VALID_STATUS_TRANSITIONS[firstApt.status];
+
+  ui.alert(
+    'Button Debug Complete',
+    'First appointment status: "' + firstApt.status + '"\n' +
+    'Allowed transitions: ' + (allowedForFirst ? allowedForFirst.join(', ') : 'NONE') + '\n\n' +
+    'Expected statuses:\n' + Object.keys(VALID_STATUS_TRANSITIONS).join(', ') + '\n\n' +
+    'Check View → Logs for detailed output.',
+    ui.ButtonSet.OK
+  );
+}

@@ -398,10 +398,31 @@
   </div>
 
   <script>
+    // VERSION TRACKING - Increment this when making changes
+    var HTML_VERSION = 'v1.1.0';
+
     var currentAppointment = null;
     var allProviders = [];
     var allServices = [];
     var selectedTimeSlot = null;
+    var cachedAppointments = {}; // Store appointments from search results
+
+    // Status transition rules (must match server-side VALID_STATUS_TRANSITIONS)
+    var VALID_STATUS_TRANSITIONS = {
+      'Booked': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show', 'Confirmed'],
+      'Confirmed': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show'],
+      'Checked-in': ['Completed', 'No-show'],
+      'Rescheduled': ['Booked', 'Cancelled'],
+      'Cancelled': [],
+      'Completed': [],
+      'No-show': []
+    };
+
+    // Helper function to check if a status transition is allowed
+    function canTransitionTo(currentStatus, newStatus) {
+      var allowedTransitions = VALID_STATUS_TRANSITIONS[currentStatus];
+      return allowedTransitions && allowedTransitions.indexOf(newStatus) !== -1;
+    }
 
     // Initialize
     window.onload = function() {
@@ -463,7 +484,6 @@
     }
 
     function displayResults(appointments) {
-      console.log('displayResults called with', appointments.length, 'appointments');
       var container = document.getElementById('resultsContainer');
 
       if (!appointments || appointments.length === 0) {
@@ -471,9 +491,14 @@
         return;
       }
 
+      // Cache all appointments for quick lookup when user clicks on them
+      cachedAppointments = {};
+      appointments.forEach(function(apt) {
+        cachedAppointments[apt.appointment_id] = apt;
+      });
+
       var html = '<div class="appointment-list">';
       appointments.forEach(function(apt) {
-        console.log('Rendering appointment:', apt.appointment_id, 'Client:', apt.client.name, 'Service:', apt.service);
         var statusClass = 'status-' + apt.status.toLowerCase().replace('-', '-');
         html += '<div class="appointment-item" onclick="viewAppointmentDetails(\'' + apt.appointment_id + '\')" style="cursor: pointer;">';
         html += '  <div class="appointment-header">';
@@ -488,29 +513,57 @@
       });
       html += '</div>';
 
-      console.log('Setting resultsContainer HTML');
       container.innerHTML = html;
     }
 
     function viewAppointmentDetails(appointmentId) {
-      console.log('viewAppointmentDetails called with ID:', appointmentId);
       document.getElementById('detailsContent').innerHTML = '<div class="loading">Loading details...</div>';
       document.getElementById('detailsError').textContent = '';
       document.getElementById('detailsSuccess').textContent = '';
 
+      // Check if we have cached data from search results
+      if (cachedAppointments[appointmentId]) {
+        var apt = cachedAppointments[appointmentId];
+
+        // Transform cached data to match expected structure
+        var details = {
+          appointment: {
+            appointment_id: apt.appointment_id,
+            appointment_date: apt.appointment_date,
+            start_time: apt.start_time,
+            duration: apt.duration,
+            status: apt.status,
+            notes: apt.notes || ''
+          },
+          client: apt.client,
+          provider: apt.provider,
+          service: apt.service,
+          canCancel: canTransitionTo(apt.status, 'Cancelled'),
+          canReschedule: canTransitionTo(apt.status, 'Rescheduled'),
+          canCheckIn: canTransitionTo(apt.status, 'Checked-in'),
+          canMarkNoShow: canTransitionTo(apt.status, 'No-show'),
+          canComplete: canTransitionTo(apt.status, 'Completed')
+        };
+
+        currentAppointment = details;
+        displayAppointmentDetails(details);
+        showDetailsView();
+        return;
+      }
+
+      // Fall back to server call if not in cache
       google.script.run
         .withSuccessHandler(function(details) {
-          console.log('Got appointment details:', details);
           if (!details) {
             document.getElementById('detailsError').textContent = 'Appointment not found';
             return;
           }
+
           currentAppointment = details;
           displayAppointmentDetails(details);
           showDetailsView();
         })
         .withFailureHandler(function(error) {
-          console.log('Error getting details:', error);
           document.getElementById('detailsError').textContent = 'Error: ' + error.message;
         })
         .getAppointmentDetailsForUI(appointmentId);
