@@ -374,8 +374,7 @@ function getOrCreateProviderCalendar(provider) {
     if (provider.calendar_id) {
       var existingCalendar = CalendarApp.getCalendarById(provider.calendar_id);
       if (existingCalendar) {
-        // Set calendar color using Calendar API
-        setCalendarColor(provider.calendar_id, provider.provider_id);
+        // Don't set color on every retrieval - only during initial setup
         return existingCalendar;
       }
       // Calendar was deleted externally, clear the stored ID and create new one
@@ -389,9 +388,8 @@ function getOrCreateProviderCalendar(provider) {
     var allCalendars = CalendarApp.getAllCalendars();
     for (var i = 0; i < allCalendars.length; i++) {
       if (allCalendars[i].getName() === calendarName) {
-        // Found existing calendar, store the ID and set color
+        // Found existing calendar, store the ID (color already set during initial creation)
         var calId = allCalendars[i].getId();
-        setCalendarColor(calId, provider.provider_id);
 
         updateRecordById(SHEETS.PROVIDERS, provider.provider_id, {
           calendar_id: calId

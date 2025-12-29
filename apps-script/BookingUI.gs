@@ -351,14 +351,17 @@ function searchAppointmentsForUI(searchParams) {
 
     // Filter appointments
     var results = appointments.filter(function(apt) {
-      // Filter by query (client name or appointment ID)
+      // Filter by query (client name, phone number, or appointment ID)
       if (searchParams.query) {
         var query = searchParams.query.toLowerCase();
         var client = clientMap[apt.client_id];
         var clientName = client ? client.name.toLowerCase() : '';
+        var clientPhone = client && client.phone ? client.phone.toLowerCase() : '';
         var aptId = apt.appointment_id.toLowerCase();
 
-        if (clientName.indexOf(query) === -1 && aptId.indexOf(query) === -1) {
+        if (clientName.indexOf(query) === -1 &&
+            clientPhone.indexOf(query) === -1 &&
+            aptId.indexOf(query) === -1) {
           return false;
         }
       }
@@ -412,6 +415,9 @@ function searchAppointmentsForUI(searchParams) {
         duration: apt.duration,
         status: apt.status,
         notes: apt.notes || '',
+        client_id: apt.client_id,
+        provider_id: apt.provider_id,
+        service_id: apt.service_id,
         client: clientMap[apt.client_id] || {},
         provider: providerMap[apt.provider_id] || {},
         service: service || {}

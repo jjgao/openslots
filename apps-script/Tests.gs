@@ -538,11 +538,13 @@ function cleanupTestData() {
   var ui = SpreadsheetApp.getUi();
 
   var confirm = ui.alert(
-    'Cleanup Test Data',
+    'Cleanup Calendar Events',
     'This will:\n' +
-    '• Delete all OpenSlots provider calendars\n' +
+    '• Delete all calendar events from appointments\n' +
     '• Clear calendar_event_id from appointments\n' +
     '• Clear calendar_id from providers\n\n' +
+    'Note: Empty provider calendars will remain in your Google Calendar.\n' +
+    'You can delete them manually if desired.\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
   );
@@ -551,29 +553,39 @@ function cleanupTestData() {
     return;
   }
 
-  // Delete all provider calendars (this also clears calendar_id from providers)
-  var calResult = deleteAllProviderCalendars();
-
-  // Clear calendar_event_id from all appointments
-  var appointmentsCleared = 0;
+  // Delete all calendar events from appointments
+  var eventsDeleted = 0;
   var appointments = getAppointments();
   for (var i = 0; i < appointments.length; i++) {
     if (appointments[i].calendar_event_id) {
-      updateRecordById(SHEETS.APPOINTMENTS, appointments[i].appointment_id, {
-        calendar_event_id: ''
+      var result = deleteCalendarEvent(appointments[i].appointment_id);
+      if (result.success) {
+        eventsDeleted++;
+      }
+    }
+  }
+
+  // Clear calendar_id from all providers
+  var providersCleared = 0;
+  var providers = getProviders();
+  for (var i = 0; i < providers.length; i++) {
+    if (providers[i].calendar_id) {
+      updateRecordById(SHEETS.PROVIDERS, providers[i].provider_id, {
+        calendar_id: ''
       });
-      appointmentsCleared++;
+      providersCleared++;
     }
   }
 
   ui.alert(
     'Cleanup Complete',
-    `Deleted ${calResult.deleted} provider calendar(s)\n` +
-    `Cleared ${appointmentsCleared} appointment reference(s)`,
+    `Deleted ${eventsDeleted} calendar event(s)\n` +
+    `Cleared ${providersCleared} provider calendar reference(s)\n\n` +
+    'Empty calendars remain in Google Calendar (can be deleted manually)',
     ui.ButtonSet.OK
   );
 
-  Logger.log(`Test data cleanup: ${calResult.deleted} calendars deleted, ${appointmentsCleared} appointments cleared`);
+  Logger.log(`Test data cleanup: ${eventsDeleted} events deleted, ${providersCleared} provider references cleared`);
 }
 
 /**

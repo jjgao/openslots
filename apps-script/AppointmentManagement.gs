@@ -18,7 +18,7 @@ var VALID_STATUS_TRANSITIONS = {
   'Booked': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show', 'Confirmed'],
   'Confirmed': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show'],
   'Checked-in': ['Completed', 'No-show'],
-  'Rescheduled': ['Booked', 'Cancelled'],
+  'Rescheduled': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show', 'Confirmed'],
   'Cancelled': [],  // Finalized - no further changes
   'Completed': [],  // Finalized
   'No-show': []     // Finalized
@@ -203,6 +203,14 @@ function rescheduleAppointment(appointmentId, options) {
     if (options.newDuration) {
       updates.duration = options.newDuration;
       after.duration = options.newDuration;
+    }
+
+    // Calculate and update end_time if start_time or duration changed
+    if (options.newStartTime || options.newDuration) {
+      var finalStartTime = options.newStartTime || appointment.start_time;
+      var finalDuration = options.newDuration || appointment.duration;
+      var newEndTime = calculateEndTime(finalStartTime, finalDuration);
+      updates.end_time = newEndTime;
     }
 
     // Check availability of new slot if time/date/provider changed

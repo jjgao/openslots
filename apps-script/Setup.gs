@@ -12,43 +12,110 @@
  */
 
 /**
+ * Admin email configuration (DEPRECATED - now stored in System_Config)
+ * Admin emails are now managed through: Appointment System → Admin → Manage Admin Users
+ * This array is kept for backward compatibility only
+ */
+var ADMIN_EMAILS = [
+  // DEPRECATED: Use "Manage Admin Users" menu instead
+  // Emails here will still work but should be migrated to System_Config
+];
+
+/**
+ * Checks if current user is an admin
+ * Reads from System_Config sheet for admin email list
+ * @returns {boolean} True if user is admin or owner
+ */
+function isAdmin() {
+  var userEmail = Session.getActiveUser().getEmail();
+  var owner = SpreadsheetApp.getActiveSpreadsheet().getOwner().getEmail();
+
+  // Owner is always admin
+  if (userEmail === owner) {
+    return true;
+  }
+
+  // Get admin emails from System_Config
+  var adminEmailsConfig = getConfig('admin_emails', '');
+  var adminList = [];
+
+  if (adminEmailsConfig) {
+    adminList = adminEmailsConfig.split(',').map(function(email) {
+      return email.trim();
+    }).filter(function(email) {
+      return email.length > 0;
+    });
+  }
+
+  // Check config-based admin list
+  if (adminList.indexOf(userEmail) !== -1) {
+    return true;
+  }
+
+  // Check legacy hardcoded list (backward compatibility)
+  return ADMIN_EMAILS.indexOf(userEmail) !== -1;
+}
+
+/**
  * Creates custom menu when spreadsheet opens
+ * Menu items shown based on user role (Admin vs Staff)
  */
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
-  ui.createMenu('Appointment System')
-    .addItem('Initialize System', 'initializeSystem')
-    .addItem('Add Sample Data', 'addSampleData')
-    .addSeparator()
-    .addItem('Book Appointment', 'showBookingSidebar')
-    .addItem('Manage Appointments', 'showAppointmentManagementSidebar')
-    .addSeparator()
-    .addSubMenu(ui.createMenu('Calendar')
-      .addItem('Sync Missing Calendar Events', 'syncAllMissingCalendarEvents')
-      .addItem('Update Calendar Colors', 'updateAllProviderCalendarColors')
-      .addSeparator()
-      .addItem('Setup Edit Trigger', 'setupOnEditTrigger')
-      .addItem('Remove Edit Trigger', 'removeOnEditTrigger'))
-    .addSeparator()
-    .addItem('Clear All Data', 'clearAllData')
-    .addItem('Validate Data', 'validateSystemData')
-    .addSeparator()
-    .addSubMenu(ui.createMenu('Tests')
-      .addItem('Run All Tests', 'runAllTests')
-      .addItem('Run Quick Tests', 'runQuickTests')
-      .addItem('Run MVP2 Tests', 'runMvp2Tests')
-      .addItem('Run MVP3 Tests', 'runMvp3Tests')
-      .addItem('Run MVP4 Tests', 'runMvp4Tests')
-      .addSeparator()
-      .addItem('Debug Appointments', 'debugAppointments')
-      .addItem('Debug Service Lookup', 'remoteDebugServiceLookup')
-      .addItem('Show Appointment Details', 'showAppointmentDetailsInAlert')
-      .addSeparator()
-      .addItem('Cleanup Test Sheets', 'cleanupTestSheets')
-      .addItem('Cleanup Calendar Events', 'cleanupTestData'))
-    .addSeparator()
-    .addItem('About', 'showAbout')
-    .addToUi();
+  var isAdminUser = isAdmin();
+
+  var menu = ui.createMenu('Appointment System');
+
+  // ========== STAFF FUNCTIONS (Everyone) ==========
+  menu.addItem('Book Appointment', 'showBookingSidebar')
+      .addItem('Manage Appointments', 'showAppointmentManagementSidebar')
+      .addItem('Manage Clients', 'showClientManagementSidebar');
+
+  // ========== ADMIN FUNCTIONS ==========
+  if (isAdminUser) {
+    menu.addSeparator()
+        .addSubMenu(ui.createMenu('Admin')
+          .addItem('Initialize System', 'initializeSystem')
+          .addItem('Add Sample Data', 'addSampleData')
+          .addSeparator()
+          .addSubMenu(ui.createMenu('Calendar')
+            .addItem('Sync Missing Calendar Events', 'syncAllMissingCalendarEvents')
+            .addItem('Update Calendar Colors', 'updateAllProviderCalendarColors')
+            .addSeparator()
+            .addItem('Setup Edit Trigger', 'setupOnEditTrigger')
+            .addItem('Remove Edit Trigger', 'removeOnEditTrigger'))
+          .addSeparator()
+          .addSubMenu(ui.createMenu('Sheet Protection')
+            .addItem('Protect Sheets (Basic Warning)', 'protectAllSheets')
+            .addItem('Protect Sheets (Advanced)', 'protectSheetsAdvanced')
+            .addItem('Remove All Protections', 'unprotectAllSheets')
+            .addSeparator()
+            .addItem('Check Protection Status', 'checkProtectionStatus'))
+          .addSeparator()
+          .addItem('Manage Admin Users', 'manageAdminUsers')
+          .addItem('Access Control Guide', 'showAccessControlGuide'));
+
+    // ========== DEV/TEST FUNCTIONS ==========
+    menu.addSubMenu(ui.createMenu('Dev & Test')
+          .addItem('Run All Tests', 'runAllTests')
+          .addItem('Run Quick Tests', 'runQuickTests')
+          .addItem('Run MVP2 Tests', 'runMvp2Tests')
+          .addItem('Run MVP3 Tests', 'runMvp3Tests')
+          .addItem('Run MVP4 Tests', 'runMvp4Tests')
+          .addSeparator()
+          .addItem('Debug Appointments', 'debugAppointments')
+          .addItem('Debug Service Lookup', 'remoteDebugServiceLookup')
+          .addItem('Show Appointment Details', 'showAppointmentDetailsInAlert')
+          .addSeparator()
+          .addItem('Cleanup Test Sheets', 'cleanupTestSheets')
+          .addItem('Cleanup Calendar Events', 'cleanupTestData'));
+  }
+
+  // ========== HELP (Everyone) ==========
+  menu.addSeparator()
+      .addItem('About', 'showAbout');
+
+  menu.addToUi();
 }
 
 /**
@@ -72,10 +139,238 @@ function showAbout() {
     'To set up:\n' +
     '1. Click "Appointment System → Initialize System"\n' +
     '2. Click "Appointment System → Calendar → Setup Edit Trigger"\n' +
-    '3. Click "Appointment System → Book Appointment" to start booking\n\n' +
+    '3. Click "Appointment System → Book Appointment" to start booking\n' +
+    '4. Click "Appointment System → Access Control Guide" for security setup\n\n' +
     'For help: https://github.com/jjgao/openslots',
     ui.ButtonSet.OK
   );
+}
+
+/**
+ * Shows access control guide
+ * Explains how to set up view-only access with UI-only permissions
+ */
+function showAccessControlGuide() {
+  var ui = SpreadsheetApp.getUi();
+
+  var message = 'RECOMMENDED: Editor Access + Sheet Protection\n\n' +
+    'IMPORTANT: Viewers cannot see custom menus!\n' +
+    'Staff need Editor access to see the "Appointment System" menu.\n\n' +
+    '=== SETUP STEPS ===\n\n' +
+    '1. Share this spreadsheet:\n' +
+    '   • Click "Share" button (top-right)\n' +
+    '   • Add staff email addresses\n' +
+    '   • Set permission to "Editor" (required for menu access)\n' +
+    '   • Click "Send"\n\n' +
+    '2. Protect the sheets:\n' +
+    '   • Go to: Appointment System → Sheet Protection\n' +
+    '   • Choose protection level:\n' +
+    '     - Basic Warning: Shows warning, staff can override\n' +
+    '     - Advanced: Only admins can edit sheets directly\n\n' +
+    '3. Staff can now:\n' +
+    '   • See the "Appointment System" menu\n' +
+    '   • Use Book Appointment, Manage Appointments, etc.\n' +
+    '   • Scripts work normally (protection doesn\'t block them)\n\n' +
+    '=== PROTECTION LEVELS ===\n\n' +
+    '• Basic Warning: Shows "protected cell" warning, can be overridden\n' +
+    '  - Good for training/awareness\n' +
+    '  - Staff can still edit if needed\n\n' +
+    '• Advanced: Hard protection, only specified admins can edit\n' +
+    '  - Strongest protection\n' +
+    '  - Specify admin emails who can edit\n' +
+    '  - Leave blank = only you (owner) can edit\n\n' +
+    '=== HOW IT WORKS ===\n\n' +
+    '• Staff (Editors): See menus, can use UIs, sheets are protected\n' +
+    '• Scripts bypass protection (always work)\n' +
+    '• Data integrity maintained\n' +
+    '• Validated changes only through UIs';
+
+  ui.alert('Access Control Guide', message, ui.ButtonSet.OK);
+}
+
+/**
+ * Manages admin users through a simple UI
+ * Allows owner to add/remove admin email addresses
+ */
+function manageAdminUsers() {
+  var ui = SpreadsheetApp.getUi();
+  var owner = SpreadsheetApp.getActiveSpreadsheet().getOwner().getEmail();
+  var currentUser = Session.getActiveUser().getEmail();
+
+  // Only owner can manage admin users
+  if (currentUser !== owner) {
+    ui.alert(
+      'Permission Denied',
+      'Only the spreadsheet owner can manage admin users.\n\n' +
+      'Owner: ' + owner,
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+
+  // Get current admin emails
+  var adminEmailsConfig = getConfig('admin_emails', '');
+  var adminList = [];
+
+  if (adminEmailsConfig) {
+    adminList = adminEmailsConfig.split(',').map(function(email) {
+      return email.trim();
+    }).filter(function(email) {
+      return email.length > 0;
+    });
+  }
+
+  var currentAdmins = adminList.length > 0
+    ? adminList.join('\n')
+    : '(No additional admins - only you have admin access)';
+
+  var message = 'Current Admin Users:\n\n' +
+    currentAdmins + '\n\n' +
+    'Note: You (owner) always have admin access.\n\n' +
+    'Click YES to add an admin\n' +
+    'Click NO to remove an admin\n' +
+    'Click CANCEL to exit';
+
+  var response = ui.alert(
+    'Manage Admin Users',
+    message,
+    ui.ButtonSet.YES_NO_CANCEL
+  );
+
+  if (response === ui.Button.YES) {
+    // Add admin
+    addAdminUser(adminList);
+  } else if (response === ui.Button.NO) {
+    // Remove admin
+    removeAdminUser(adminList);
+  }
+  // CANCEL = do nothing
+}
+
+/**
+ * Helper function to add an admin user
+ * @param {Array<string>} currentAdminList - Current list of admin emails
+ */
+function addAdminUser(currentAdminList) {
+  var ui = SpreadsheetApp.getUi();
+
+  var response = ui.prompt(
+    'Add Admin User',
+    'Enter the email address of the user to grant admin access:\n\n' +
+    '(This user will see Admin and Dev & Test menus)',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  var newEmail = response.getResponseText().trim().toLowerCase();
+
+  if (!newEmail) {
+    ui.alert('Error', 'Email address cannot be empty.', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Basic email validation
+  if (newEmail.indexOf('@') === -1 || newEmail.indexOf('.') === -1) {
+    ui.alert('Error', 'Please enter a valid email address.', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Check if already admin
+  if (currentAdminList.indexOf(newEmail) !== -1) {
+    ui.alert('Already Admin', newEmail + ' is already an admin user.', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Add to list
+  currentAdminList.push(newEmail);
+
+  // Save to config
+  var adminEmailsString = currentAdminList.join(',');
+  if (setConfig('admin_emails', adminEmailsString)) {
+    ui.alert(
+      'Admin Added',
+      'Successfully added admin user:\n\n' + newEmail + '\n\n' +
+      'They will see Admin and Dev & Test menus when they open the spreadsheet.',
+      ui.ButtonSet.OK
+    );
+  } else {
+    ui.alert(
+      'Error',
+      'Failed to save admin user. Please check that System_Config sheet exists.',
+      ui.ButtonSet.OK
+    );
+  }
+}
+
+/**
+ * Helper function to remove an admin user
+ * @param {Array<string>} currentAdminList - Current list of admin emails
+ */
+function removeAdminUser(currentAdminList) {
+  var ui = SpreadsheetApp.getUi();
+
+  if (currentAdminList.length === 0) {
+    ui.alert(
+      'No Admins',
+      'There are no additional admin users to remove.\n\n' +
+      'Only you (the owner) have admin access.',
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+
+  var response = ui.prompt(
+    'Remove Admin User',
+    'Current admin users:\n' + currentAdminList.join('\n') + '\n\n' +
+    'Enter the email address to remove admin access:',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  var emailToRemove = response.getResponseText().trim().toLowerCase();
+
+  if (!emailToRemove) {
+    ui.alert('Error', 'Email address cannot be empty.', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Find and remove
+  var index = currentAdminList.indexOf(emailToRemove);
+
+  if (index === -1) {
+    ui.alert(
+      'Not Found',
+      emailToRemove + ' is not in the admin list.\n\n' +
+      'Current admins:\n' + currentAdminList.join('\n'),
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+
+  currentAdminList.splice(index, 1);
+
+  // Save to config
+  var adminEmailsString = currentAdminList.join(',');
+  if (setConfig('admin_emails', adminEmailsString)) {
+    ui.alert(
+      'Admin Removed',
+      'Successfully removed admin access for:\n\n' + emailToRemove + '\n\n' +
+      'They will no longer see Admin and Dev & Test menus.',
+      ui.ButtonSet.OK
+    );
+  } else {
+    ui.alert(
+      'Error',
+      'Failed to save changes. Please check that System_Config sheet exists.',
+      ui.ButtonSet.OK
+    );
+  }
 }
 
 /**
@@ -384,7 +679,7 @@ function createActivityLogSheet() {
 
   // Add data validation
   addDropdownValidation(sheet, 'C2:C1000',
-    ['book', 'cancel', 'reschedule', 'check-in', 'no-show', 'late', 'confirmation-call', 'confirmation-text', 'confirmation-email'],
+    ['book', 'cancel', 'reschedule', 'check-in', 'no-show', 'complete', 'late', 'confirmation-call', 'confirmation-text', 'confirmation-email', 'calendar-create', 'calendar-update', 'calendar-delete'],
     'Select action type');  // action_type
 
   sheet.setColumnWidth(1, 100);  // log_id
@@ -564,4 +859,242 @@ function deleteDefaultSheet() {
     ss.deleteSheet(sheet);
     Logger.log('Deleted default Sheet1');
   }
+}
+
+/**
+ * Protects all data sheets from editing
+ * Users with Editor access can see menus but cannot edit sheets directly
+ * Scripts can still modify protected sheets
+ */
+function protectAllSheets() {
+  var ui = SpreadsheetApp.getUi();
+
+  var response = ui.alert(
+    'Protect All Sheets',
+    'This will protect all data sheets with a warning.\n\n' +
+    'Staff with Editor access will:\n' +
+    '• See "You are trying to edit a protected cell..." warning\n' +
+    '• Be able to click "OK" and edit anyway (soft protection)\n\n' +
+    'For stronger protection, use "Protect Sheets (Advanced)" instead.\n\n' +
+    'Continue with basic protection?',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (response !== ui.Button.YES) {
+    return;
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetsToProtect = [
+    'Appointments',
+    'Clients',
+    'Providers',
+    'Services',
+    'Provider_Availability',
+    'Provider_Exceptions',
+    'Business_Holidays',
+    'Business_Exceptions',
+    'Activity_Log',
+    'Confirmation_Tracking',
+    'System_Config'
+  ];
+
+  var protected = 0;
+  var skipped = 0;
+
+  sheetsToProtect.forEach(function(sheetName) {
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      skipped++;
+      return;
+    }
+
+    // Remove existing protections first
+    var protections = sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+    protections.forEach(function(p) { p.remove(); });
+
+    // Add new protection with warning
+    var protection = sheet.protect().setDescription('Protected data sheet - use UIs to make changes');
+    protection.setWarningOnly(true);
+    protected++;
+    Logger.log('Protected sheet: ' + sheetName);
+  });
+
+  ui.alert(
+    'Protection Complete',
+    'Protected ' + protected + ' sheet(s).\n' +
+    (skipped > 0 ? 'Skipped ' + skipped + ' missing sheet(s).\n\n' : '\n') +
+    'Staff will see warnings when trying to edit sheets directly.',
+    ui.ButtonSet.OK
+  );
+}
+
+/**
+ * Protects all data sheets with specific editors only (advanced protection)
+ * Only specified users can edit sheets directly
+ */
+function protectSheetsAdvanced() {
+  var ui = SpreadsheetApp.getUi();
+
+  var response = ui.prompt(
+    'Protect Sheets (Advanced)',
+    'This will protect sheets so ONLY specified users can edit.\n\n' +
+    'Enter admin email addresses (comma-separated):\n' +
+    'Example: admin@example.com, manager@example.com\n\n' +
+    'Leave blank to allow only yourself (the owner).',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  var adminEmails = response.getResponseText().trim();
+  var adminList = [];
+
+  if (adminEmails) {
+    adminList = adminEmails.split(',').map(function(email) {
+      return email.trim();
+    }).filter(function(email) {
+      return email.length > 0;
+    });
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetsToProtect = [
+    'Appointments',
+    'Clients',
+    'Providers',
+    'Services',
+    'Provider_Availability',
+    'Provider_Exceptions',
+    'Business_Holidays',
+    'Business_Exceptions',
+    'Activity_Log',
+    'Confirmation_Tracking',
+    'System_Config'
+  ];
+
+  var protected = 0;
+  var skipped = 0;
+
+  sheetsToProtect.forEach(function(sheetName) {
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      skipped++;
+      return;
+    }
+
+    // Remove existing protections first
+    var protections = sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+    protections.forEach(function(p) { p.remove(); });
+
+    // Add new protection with specific editors
+    var protection = sheet.protect().setDescription('Protected data sheet - use UIs to make changes');
+    protection.setWarningOnly(false);
+
+    // CRITICAL: Remove all editors first (Google Sheets adds them by default)
+    var currentEditors = protection.getEditors();
+    if (currentEditors.length > 0) {
+      protection.removeEditors(currentEditors);
+    }
+
+    // Add only specified admin editors (if any)
+    if (adminList.length > 0) {
+      protection.addEditors(adminList);
+    }
+
+    // Always disable domain editing to prevent all editors from editing
+    protection.setDomainEdit(false);
+
+    protected++;
+    Logger.log('Protected sheet (advanced): ' + sheetName);
+  });
+
+  var adminMessage = adminList.length > 0
+    ? 'Only you and ' + adminList.length + ' admin(s) can edit.\n'
+    : 'Only you (the owner) can edit.\n';
+
+  ui.alert(
+    'Advanced Protection Complete',
+    'Protected ' + protected + ' sheet(s).\n' +
+    (skipped > 0 ? 'Skipped ' + skipped + ' missing sheet(s).\n\n' : '\n') +
+    adminMessage + '\n' +
+    'Other staff CANNOT edit sheets directly, even with Editor access.\n' +
+    'Scripts will continue to work normally.',
+    ui.ButtonSet.OK
+  );
+}
+
+/**
+ * Shows current protection status for all sheets
+ */
+function checkProtectionStatus() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = ss.getSheets();
+
+  var statusReport = 'PROTECTION STATUS:\n\n';
+
+  sheets.forEach(function(sheet) {
+    var sheetName = sheet.getName();
+    var protections = sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+
+    if (protections.length === 0) {
+      statusReport += sheetName + ': NO PROTECTION\n';
+    } else {
+      protections.forEach(function(p) {
+        var warningOnly = p.isWarningOnly();
+        var editors = p.getEditors().map(function(user) { return user.getEmail(); });
+        var canDomainEdit = p.canDomainEdit();
+
+        statusReport += sheetName + ':\n';
+        statusReport += '  Type: ' + (warningOnly ? 'WARNING ONLY' : 'PROTECTED') + '\n';
+        statusReport += '  Domain Edit: ' + (canDomainEdit ? 'YES' : 'NO') + '\n';
+        statusReport += '  Editors: ' + (editors.length > 0 ? editors.join(', ') : 'NONE') + '\n';
+      });
+    }
+    statusReport += '\n';
+  });
+
+  Logger.log(statusReport);
+  ui.alert('Protection Status', statusReport, ui.ButtonSet.OK);
+}
+
+/**
+ * Removes all sheet protections
+ */
+function unprotectAllSheets() {
+  var ui = SpreadsheetApp.getUi();
+
+  var response = ui.alert(
+    'Remove All Protections',
+    'This will remove protection from all sheets.\n\n' +
+    'All users with Editor access will be able to edit directly.\n\n' +
+    'Continue?',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (response !== ui.Button.YES) {
+    return;
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = ss.getSheets();
+  var unprotected = 0;
+
+  sheets.forEach(function(sheet) {
+    var protections = sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+    protections.forEach(function(p) {
+      p.remove();
+      unprotected++;
+    });
+  });
+
+  ui.alert(
+    'Unprotection Complete',
+    'Removed ' + unprotected + ' protection(s).\n\n' +
+    'All sheets are now fully editable by anyone with Editor access.',
+    ui.ButtonSet.OK
+  );
 }

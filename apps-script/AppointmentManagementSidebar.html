@@ -354,7 +354,7 @@
     <div class="section">
       <div class="form-group">
         <label>Search</label>
-        <input type="text" id="searchQuery" placeholder="Client name or appointment ID">
+        <input type="text" id="searchQuery" placeholder="Client name, phone, or appointment ID">
       </div>
 
       <div class="form-group">
@@ -475,7 +475,7 @@
 
   <script>
     // VERSION TRACKING - Increment this when making changes
-    var HTML_VERSION = 'v1.1.4';
+    var HTML_VERSION = 'v1.1.9';
 
     var currentAppointment = null;
     var allProviders = [];
@@ -490,7 +490,7 @@
       'Booked': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show', 'Confirmed'],
       'Confirmed': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show'],
       'Checked-in': ['Completed', 'No-show'],
-      'Rescheduled': ['Booked', 'Cancelled'],
+      'Rescheduled': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show', 'Confirmed'],
       'Cancelled': [],
       'Completed': [],
       'No-show': []
@@ -667,6 +667,8 @@
       var html = '<div class="appointment-list">';
       appointments.forEach(function(apt) {
         var statusClass = 'status-' + apt.status.toLowerCase().replace('-', '-');
+        var providerName = apt.provider.name || apt.provider_id || 'Unknown Provider';
+        var serviceName = apt.service.name || apt.service_id || 'Unknown Service';
         html += '<div class="appointment-item" onclick="viewAppointmentDetails(\'' + apt.appointment_id + '\')" style="cursor: pointer;">';
         html += '  <div class="appointment-header">';
         html += '    ' + apt.client.name;
@@ -674,7 +676,7 @@
         html += '  </div>';
         html += '  <div class="appointment-details">';
         html += '    ' + apt.appointment_date + ' at ' + apt.start_time;
-        html += '    <br>' + apt.provider.name + ' - ' + apt.service.name + ' (' + apt.duration + ' min)';
+        html += '    <br>' + providerName + ' - ' + serviceName + ' (' + apt.duration + ' min)';
         html += '  </div>';
         html += '</div>';
       });
@@ -700,7 +702,10 @@
             start_time: apt.start_time,
             duration: apt.duration,
             status: apt.status,
-            notes: apt.notes || ''
+            notes: apt.notes || '',
+            client_id: apt.client.client_id,
+            provider_id: apt.provider.provider_id,
+            service_id: apt.service.service_id
           },
           client: apt.client,
           provider: apt.provider,
@@ -773,12 +778,12 @@
 
       html += '<div class="detail-row">';
       html += '  <span class="detail-label">Provider:</span>';
-      html += '  <span class="detail-value">' + details.provider.name + '</span>';
+      html += '  <span class="detail-value">' + (details.provider.name || apt.provider_id || 'Unknown Provider') + '</span>';
       html += '</div>';
 
       html += '<div class="detail-row">';
       html += '  <span class="detail-label">Service:</span>';
-      html += '  <span class="detail-value">' + details.service.name + '</span>';
+      html += '  <span class="detail-value">' + (details.service.name || apt.service_id || 'Unknown Service') + '</span>';
       html += '</div>';
 
       if (apt.notes) {
@@ -839,13 +844,13 @@
 
         google.script.run
           .withSuccessHandler(function(result) {
-            if (result.success) {
+            if (result && result.success) {
               document.getElementById('detailsSuccess').textContent = 'Successfully checked in!';
               setTimeout(function() {
                 viewAppointmentDetails(currentAppointment.appointment.appointment_id);
               }, 1000);
             } else {
-              document.getElementById('detailsError').textContent = result.error || result.message;
+              document.getElementById('detailsError').textContent = (result && (result.error || result.message)) || 'Unknown error';
             }
           })
           .withFailureHandler(function(error) {
@@ -870,13 +875,13 @@
 
         google.script.run
           .withSuccessHandler(function(result) {
-            if (result.success) {
+            if (result && result.success) {
               document.getElementById('detailsSuccess').textContent = 'Appointment completed!';
               setTimeout(function() {
                 viewAppointmentDetails(currentAppointment.appointment.appointment_id);
               }, 1000);
             } else {
-              document.getElementById('detailsError').textContent = result.error || result.message;
+              document.getElementById('detailsError').textContent = (result && (result.error || result.message)) || 'Unknown error';
             }
           })
           .withFailureHandler(function(error) {
@@ -901,13 +906,13 @@
 
         google.script.run
           .withSuccessHandler(function(result) {
-            if (result.success) {
+            if (result && result.success) {
               document.getElementById('detailsSuccess').textContent = 'Marked as no-show';
               setTimeout(function() {
                 viewAppointmentDetails(currentAppointment.appointment.appointment_id);
               }, 1000);
             } else {
-              document.getElementById('detailsError').textContent = result.error || result.message;
+              document.getElementById('detailsError').textContent = (result && (result.error || result.message)) || 'Unknown error';
             }
           })
           .withFailureHandler(function(error) {
@@ -932,13 +937,13 @@
 
         google.script.run
           .withSuccessHandler(function(result) {
-            if (result.success) {
+            if (result && result.success) {
               document.getElementById('detailsSuccess').textContent = 'Appointment cancelled';
               setTimeout(function() {
                 viewAppointmentDetails(currentAppointment.appointment.appointment_id);
               }, 1000);
             } else {
-              document.getElementById('detailsError').textContent = result.error || result.message;
+              document.getElementById('detailsError').textContent = (result && (result.error || result.message)) || 'Unknown error';
             }
           })
           .withFailureHandler(function(error) {
@@ -984,7 +989,7 @@
       allServices.forEach(function(service) {
         var option = document.createElement('option');
         option.value = service.service_id;
-        option.textContent = service.name + ' (' + service.default_duration + ' min)';
+        option.textContent = service.name;
         if (service.service_id === apt.service_id) {
           option.selected = true;
         }
@@ -999,6 +1004,9 @@
 
       // Show reschedule view
       showRescheduleView();
+
+      // Automatically load available time slots with current appointment settings
+      loadAvailableSlots();
     }
 
     function loadAvailableSlots() {
@@ -1016,9 +1024,9 @@
 
       google.script.run
         .withSuccessHandler(function(result) {
-          if (!result.success) {
+          if (!result || !result.success) {
             document.getElementById('timeSlotsContainer').innerHTML = '';
-            document.getElementById('rescheduleError').textContent = result.error || 'No available times';
+            document.getElementById('rescheduleError').textContent = (result && result.error) || 'No available times';
             return;
           }
 
@@ -1098,12 +1106,12 @@
 
       google.script.run
         .withSuccessHandler(function(result) {
-          if (result.success) {
+          if (result && result.success) {
             alert('Appointment rescheduled successfully!');
             showSearchView();
             searchAppointments(); // Refresh the search results
           } else {
-            document.getElementById('rescheduleError').textContent = result.error || result.message;
+            document.getElementById('rescheduleError').textContent = (result && (result.error || result.message)) || 'Unknown error';
             document.getElementById('rescheduleSubmitBtn').disabled = false;
           }
         })
