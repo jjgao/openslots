@@ -778,17 +778,10 @@ function filterProvidersByService(providers, serviceId) {
  */
 function getAllProvidersAvailability(serviceId, dateStr, duration, clientId) {
   try {
-    // Get active providers
+    // Get ALL active providers (don't filter by service)
     var providers = getProviders(true);
     Logger.log('getAllProvidersAvailability: Found ' + providers.length + ' active providers');
     Logger.log('getAllProvidersAvailability: serviceId=' + serviceId + ', dateStr=' + dateStr + ', duration=' + duration + ', clientId=' + clientId);
-
-    // Filter by service if specified
-    if (serviceId) {
-      var beforeFilter = providers.length;
-      providers = filterProvidersByService(providers, serviceId);
-      Logger.log('getAllProvidersAvailability: After filtering by service ' + serviceId + ': ' + providers.length + ' providers (was ' + beforeFilter + ')');
-    }
 
     // Get returning providers if client and service specified
     var returningProviderIds = [];
@@ -801,10 +794,13 @@ function getAllProvidersAvailability(serviceId, dateStr, duration, clientId) {
       return {
         success: true,
         providers: providers.map(function(p) {
+          // Check if provider offers the service
+          var offersService = !serviceId || providerOffersServiceCheck(p, serviceId);
+
           return {
             provider_id: p.provider_id,
             name: p.name,
-            slot_count: -1,
+            slot_count: offersService ? -1 : 0,
             is_available: false,
             is_returning_provider: returningProviderIds.indexOf(p.provider_id) !== -1
           };
@@ -817,6 +813,18 @@ function getAllProvidersAvailability(serviceId, dateStr, duration, clientId) {
     var durationNum = parseInt(duration);
 
     var results = providers.map(function(p) {
+      // Check if provider offers the service
+      if (serviceId && !providerOffersServiceCheck(p, serviceId)) {
+        Logger.log('  Provider ' + p.name + ' does NOT offer service ' + serviceId + ' -> 0 slots');
+        return {
+          provider_id: p.provider_id,
+          name: p.name,
+          slot_count: 0,
+          is_available: false,
+          is_returning_provider: returningProviderIds.indexOf(p.provider_id) !== -1
+        };
+      }
+
       // Get available time windows
       var timeBlocks = getProviderAvailability(p.provider_id, date);
 
@@ -854,4 +862,18 @@ function getAllProvidersAvailability(serviceId, dateStr, duration, clientId) {
       error: 'Error calculating provider availability: ' + error.message
     };
   }
+}
+
+/**
+ * Helper function to check if a provider offers a specific service
+ * @param {Object} provider - Provider object
+ * @param {string} serviceId - Service ID to check
+ * @returns {boolean} True if provider offers the service
+ */
+function providerOffersServiceCheck(provider, serviceId) {
+  if (!provider.services_offered) {
+    return false;
+  }
+  var services = provider.services_offered.split('|').map(function(s) { return s.trim(); });
+  return services.indexOf(serviceId) !== -1;
 }
