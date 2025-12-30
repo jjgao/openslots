@@ -2108,7 +2108,7 @@ function testRescheduleToProviderWithoutService() {
     for (var i = 0; i < providers.length; i++) {
       var provider = providers[i];
       if (provider.provider_id !== appointment.provider_id) {
-        var servicesOffered = provider.services_offered ? provider.services_offered.split(',') : [];
+        var servicesOffered = provider.services_offered ? provider.services_offered.split('|') : [];
         var offersService = false;
         for (var j = 0; j < servicesOffered.length; j++) {
           if (servicesOffered[j].trim() === currentServiceId) {

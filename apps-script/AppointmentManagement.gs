@@ -582,7 +582,7 @@ function providerOffersService(providerId, serviceId) {
     return false;
   }
 
-  var servicesOffered = provider.services_offered.split(',').map(function(s) {
+  var servicesOffered = provider.services_offered.split('|').map(function(s) {
     return s.trim();
   });
 

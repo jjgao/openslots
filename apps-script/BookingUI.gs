@@ -751,14 +751,19 @@ function filterProvidersByService(providers, serviceId) {
     return providers;
   }
 
+  Logger.log('filterProvidersByService: Filtering ' + providers.length + ' providers for service ' + serviceId);
+
   return providers.filter(function(p) {
     // services_offered is pipe-separated (e.g., "SERV001|SERV002|SERV003")
     if (!p.services_offered) {
+      Logger.log('  Provider ' + p.name + ' (' + p.provider_id + '): NO services_offered field');
       return false;
     }
 
-    var services = p.services_offered.split('|');
-    return services.indexOf(serviceId) !== -1;
+    var services = p.services_offered.split('|').map(function(s) { return s.trim(); });
+    var offers = services.indexOf(serviceId) !== -1;
+    Logger.log('  Provider ' + p.name + ' (' + p.provider_id + '): services_offered=' + p.services_offered + ' -> ' + (offers ? 'MATCH' : 'NO MATCH'));
+    return offers;
   });
 }
 
@@ -775,10 +780,14 @@ function getAllProvidersAvailability(serviceId, dateStr, duration, clientId) {
   try {
     // Get active providers
     var providers = getProviders(true);
+    Logger.log('getAllProvidersAvailability: Found ' + providers.length + ' active providers');
+    Logger.log('getAllProvidersAvailability: serviceId=' + serviceId + ', dateStr=' + dateStr + ', duration=' + duration + ', clientId=' + clientId);
 
     // Filter by service if specified
     if (serviceId) {
+      var beforeFilter = providers.length;
       providers = filterProvidersByService(providers, serviceId);
+      Logger.log('getAllProvidersAvailability: After filtering by service ' + serviceId + ': ' + providers.length + ' providers (was ' + beforeFilter + ')');
     }
 
     // Get returning providers if client and service specified

@@ -70,11 +70,11 @@ function addSampleData() {
  */
 function addSampleProviders() {
   var sampleData = [
-    ['Dr. Sarah Johnson', 'sarah.johnson@example.com', '555-0101', 'SERV001,SERV002', 'Active'],
-    ['Dr. Michael Chen', 'michael.chen@example.com', '555-0102', 'SERV001,SERV003,SERV004', 'Active'],
-    ['Emma Williams', 'emma.williams@example.com', '555-0103', 'SERV002,SERV004,SERV005', 'Active'],
-    ['James Brown', 'james.brown@example.com', '555-0104', 'SERV003,SERV005,SERV006', 'Active'],
-    ['Lisa Martinez', 'lisa.martinez@example.com', '555-0105', 'SERV001,SERV007', 'Inactive']
+    ['Dr. Sarah Johnson', 'sarah.johnson@example.com', '555-0101', 'SERV001|SERV002', 'Active'],
+    ['Dr. Michael Chen', 'michael.chen@example.com', '555-0102', 'SERV001|SERV003|SERV004', 'Active'],
+    ['Emma Williams', 'emma.williams@example.com', '555-0103', 'SERV002|SERV004|SERV005', 'Active'],
+    ['James Brown', 'james.brown@example.com', '555-0104', 'SERV003|SERV005|SERV006', 'Active'],
+    ['Lisa Martinez', 'lisa.martinez@example.com', '555-0105', 'SERV001|SERV007', 'Inactive']
   ];
 
   // Use addRow() to generate IDs automatically
