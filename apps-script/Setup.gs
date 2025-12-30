@@ -78,6 +78,7 @@ function onOpen() {
         .addSubMenu(ui.createMenu('Admin')
           .addItem('Initialize System', 'initializeSystem')
           .addItem('Add Sample Data', 'addSampleData')
+          .addItem('Clear All Data', 'clearAllData')
           .addSeparator()
           .addSubMenu(ui.createMenu('Calendar')
             .addItem('Sync Missing Calendar Events', 'syncAllMissingCalendarEvents')
