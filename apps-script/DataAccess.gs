@@ -9,7 +9,7 @@
  * Sheet names as constants
  * @const {Object}
  */
-const SHEETS = {
+var SHEETS = {
   PROVIDERS: 'Providers',
   SERVICES: 'Services',
   CLIENTS: 'Clients',
@@ -27,7 +27,7 @@ const SHEETS = {
  * Column indices for each sheet (0-based)
  * @const {Object}
  */
-const COLUMNS = {
+var COLUMNS = {
   PROVIDERS: {
     ID: 0,
     NAME: 1,
@@ -92,7 +92,7 @@ const COLUMNS = {
  * @returns {Sheet|null} The sheet object or null if not found
  */
 function getSheet(sheetName) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   return ss.getSheetByName(sheetName);
 }
 
@@ -102,24 +102,24 @@ function getSheet(sheetName) {
  * @returns {Array<Object>} Array of row objects with header names as keys
  */
 function getSheetData(sheetName) {
-  const sheet = getSheet(sheetName);
+  var sheet = getSheet(sheetName);
   if (!sheet) {
     Logger.log(`Sheet not found: ${sheetName}`);
     return [];
   }
 
-  const lastRow = sheet.getLastRow();
+  var lastRow = sheet.getLastRow();
   if (lastRow <= 1) {
     return []; // Only header row
   }
 
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  const result = [];
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var result = [];
 
-  for (let i = 1; i < data.length; i++) {
-    const row = {};
-    for (let j = 0; j < headers.length; j++) {
+  for (var i = 1; i < data.length; i++) {
+    var row = {};
+    for (var j = 0; j < headers.length; j++) {
       row[headers[j]] = data[i][j];
     }
     result.push(row);
@@ -135,10 +135,10 @@ function getSheetData(sheetName) {
  * @returns {Object|null} The row object or null if not found
  */
 function getRecordById(sheetName, id) {
-  const data = getSheetData(sheetName);
-  const idColumn = getIdColumnName(sheetName);
+  var data = getSheetData(sheetName);
+  var idColumn = getIdColumnName(sheetName);
 
-  for (let i = 0; i < data.length; i++) {
+  for (var i = 0; i < data.length; i++) {
     if (data[i][idColumn] === id) {
       return data[i];
     }
@@ -153,7 +153,7 @@ function getRecordById(sheetName, id) {
  * @returns {string} The ID column name
  */
 function getIdColumnName(sheetName) {
-  const idMap = {
+  var idMap = {
     'Providers': 'provider_id',
     'Services': 'service_id',
     'Clients': 'client_id',
@@ -176,12 +176,12 @@ function getIdColumnName(sheetName) {
  * @returns {Array<Object>} Array of matching row objects
  */
 function findRecords(sheetName, criteria) {
-  const data = getSheetData(sheetName);
-  const results = [];
+  var data = getSheetData(sheetName);
+  var results = [];
 
-  for (let i = 0; i < data.length; i++) {
-    let matches = true;
-    for (const key in criteria) {
+  for (var i = 0; i < data.length; i++) {
+    var matches = true;
+    for (var key in criteria) {
       if (data[i][key] !== criteria[key]) {
         matches = false;
         break;
@@ -199,34 +199,35 @@ function findRecords(sheetName, criteria) {
  * Adds a new row to a sheet
  * @param {string} sheetName - Name of the sheet
  * @param {Array} rowData - Array of values for the new row (excluding auto-generated ID)
- * @returns {number} The row number of the new record, or -1 if failed
+ * @param {string} [customPrefix] - Optional custom ID prefix (overrides default)
+ * @returns {string} The generated ID, or null if failed
  */
-function addRow(sheetName, rowData) {
+function addRow(sheetName, rowData, customPrefix) {
   try {
-    const sheet = getSheet(sheetName);
+    var sheet = getSheet(sheetName);
     if (!sheet) {
       Logger.log(`Sheet not found: ${sheetName}`);
-      return -1;
+      return null;
     }
 
     // Get the next row number
-    const newRow = sheet.getLastRow() + 1;
+    var newRow = sheet.getLastRow() + 1;
 
     // Generate the ID directly in code (no formulas!)
-    const prefix = getIdPrefix(sheetName);
-    const idNumber = newRow - 1; // Subtract 1 for header row
-    const newId = prefix + padNumber(idNumber, 3);
+    var prefix = customPrefix || getIdPrefix(sheetName);
+    var idNumber = newRow - 1; // Subtract 1 for header row
+    var newId = prefix + padNumber(idNumber, 3);
 
     // Write the ID and data in one operation
-    const fullRowData = [newId].concat(rowData);
+    var fullRowData = [newId].concat(rowData);
     sheet.getRange(newRow, 1, 1, fullRowData.length).setValues([fullRowData]);
 
     Logger.log(`Added row ${newRow} to ${sheetName} with ID ${newId}`);
-    return newRow;
+    return newId;
 
   } catch (error) {
     Logger.log(`Error adding row to ${sheetName}: ${error.toString()}`);
-    return -1;
+    return null;
   }
 }
 
@@ -240,7 +241,7 @@ function addRow(sheetName, rowData) {
  */
 function updateCell(sheetName, rowNum, colNum, value) {
   try {
-    const sheet = getSheet(sheetName);
+    var sheet = getSheet(sheetName);
     if (!sheet) {
       return false;
     }
@@ -263,15 +264,15 @@ function updateCell(sheetName, rowNum, colNum, value) {
  */
 function updateRecordById(sheetName, id, updates) {
   try {
-    const sheet = getSheet(sheetName);
+    var sheet = getSheet(sheetName);
     if (!sheet) {
       return false;
     }
 
-    const data = sheet.getDataRange().getValues();
-    const headers = data[0];
-    const idColumn = getIdColumnName(sheetName);
-    const idColIndex = headers.indexOf(idColumn);
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var idColumn = getIdColumnName(sheetName);
+    var idColIndex = headers.indexOf(idColumn);
 
     if (idColIndex === -1) {
       Logger.log(`ID column not found: ${idColumn}`);
@@ -279,8 +280,8 @@ function updateRecordById(sheetName, id, updates) {
     }
 
     // Find the row with matching ID
-    let rowIndex = -1;
-    for (let i = 1; i < data.length; i++) {
+    var rowIndex = -1;
+    for (var i = 1; i < data.length; i++) {
       if (data[i][idColIndex] === id) {
         rowIndex = i + 1; // Convert to 1-based
         break;
@@ -293,8 +294,8 @@ function updateRecordById(sheetName, id, updates) {
     }
 
     // Update each field
-    for (const key in updates) {
-      const colIndex = headers.indexOf(key);
+    for (var key in updates) {
+      var colIndex = headers.indexOf(key);
       if (colIndex !== -1) {
         sheet.getRange(rowIndex, colIndex + 1).setValue(updates[key]);
       }
@@ -315,21 +316,21 @@ function updateRecordById(sheetName, id, updates) {
  * @returns {number} Row number (1-based) or -1 if not found
  */
 function getRowNumberById(sheetName, id) {
-  const sheet = getSheet(sheetName);
+  var sheet = getSheet(sheetName);
   if (!sheet) {
     return -1;
   }
 
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  const idColumn = getIdColumnName(sheetName);
-  const idColIndex = headers.indexOf(idColumn);
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var idColumn = getIdColumnName(sheetName);
+  var idColIndex = headers.indexOf(idColumn);
 
   if (idColIndex === -1) {
     return -1;
   }
 
-  for (let i = 1; i < data.length; i++) {
+  for (var i = 1; i < data.length; i++) {
     if (data[i][idColIndex] === id) {
       return i + 1; // Convert to 1-based
     }
@@ -344,7 +345,7 @@ function getRowNumberById(sheetName, id) {
  * @returns {Array<Object>} Array of provider objects
  */
 function getProviders(activeOnly) {
-  const providers = getSheetData(SHEETS.PROVIDERS);
+  var providers = getSheetData(SHEETS.PROVIDERS);
 
   if (activeOnly) {
     return providers.filter(p => p.active_status === 'Active');
@@ -414,16 +415,25 @@ function getAppointment(appointmentId) {
 }
 
 /**
+ * Alias for getAppointment() for consistency with naming conventions
+ * @param {string} appointmentId - The appointment ID
+ * @returns {Object|null} Appointment object or null
+ */
+function getAppointmentById(appointmentId) {
+  return getAppointment(appointmentId);
+}
+
+/**
  * Gets appointments for a specific date
  * @param {Date|string} date - The date to filter by
  * @returns {Array<Object>} Array of appointment objects
  */
 function getAppointmentsByDate(date) {
-  const appointments = getAppointments();
-  const targetDate = normalizeDate(date);
+  var appointments = getAppointments();
+  var targetDate = normalizeDate(date);
 
   return appointments.filter(apt => {
-    const aptDate = normalizeDate(apt.appointment_date);
+    var aptDate = normalizeDate(apt.appointment_date);
     return aptDate === targetDate;
   });
 }
@@ -435,7 +445,7 @@ function getAppointmentsByDate(date) {
  * @returns {Array<Object>} Array of appointment objects
  */
 function getProviderAppointments(providerId, date) {
-  const appointments = getAppointmentsByDate(date);
+  var appointments = getAppointmentsByDate(date);
   return appointments.filter(apt =>
     apt.provider_id === providerId &&
     !['Cancelled', 'No-show'].includes(apt.status)
@@ -458,8 +468,8 @@ function getProviderAvailabilityRecords(providerId) {
  * @returns {Array<Object>} Array of exception records
  */
 function getProviderExceptionsForDate(providerId, date) {
-  const exceptions = getSheetData(SHEETS.PROVIDER_EXCEPTIONS);
-  const targetDate = normalizeDate(date);
+  var exceptions = getSheetData(SHEETS.PROVIDER_EXCEPTIONS);
+  var targetDate = normalizeDate(date);
 
   return exceptions.filter(exc =>
     exc.provider_id === providerId &&
@@ -481,8 +491,8 @@ function getBusinessHolidays() {
  * @returns {Array<Object>} Array of exception records
  */
 function getBusinessExceptionsForDate(date) {
-  const exceptions = getSheetData(SHEETS.BUSINESS_EXCEPTIONS);
-  const targetDate = normalizeDate(date);
+  var exceptions = getSheetData(SHEETS.BUSINESS_EXCEPTIONS);
+  var targetDate = normalizeDate(date);
 
   return exceptions.filter(exc => normalizeDate(exc.date) === targetDate);
 }
@@ -493,16 +503,16 @@ function getBusinessExceptionsForDate(date) {
  * @returns {boolean} True if it's a holiday
  */
 function isBusinessHoliday(date) {
-  const holidays = getBusinessHolidays();
-  const targetDate = normalizeDate(date);
+  var holidays = getBusinessHolidays();
+  var targetDate = normalizeDate(date);
   // Parse date in timezone to get correct month/day
-  const parsedDate = typeof date === 'string' ? parseDateInTimezone(date) : date;
-  const targetMonth = parsedDate.getMonth();
-  const targetDay = parsedDate.getDate();
+  var parsedDate = typeof date === 'string' ? parseDateInTimezone(date) : date;
+  var targetMonth = parsedDate.getMonth();
+  var targetDay = parsedDate.getDate();
 
-  for (let i = 0; i < holidays.length; i++) {
-    const holiday = holidays[i];
-    const holidayDate = typeof holiday.date === 'string'
+  for (var i = 0; i < holidays.length; i++) {
+    var holiday = holidays[i];
+    var holidayDate = typeof holiday.date === 'string'
       ? parseDateInTimezone(holiday.date)
       : holiday.date;
 
@@ -546,9 +556,9 @@ function normalizeDate(date) {
     }
   }
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  var year = date.getFullYear();
+  var month = String(date.getMonth() + 1).padStart(2, '0');
+  var day = String(date.getDate()).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
 }
@@ -561,7 +571,7 @@ function normalizeDate(date) {
  */
 function getGeneratedId(sheetName, rowNum) {
   try {
-    const sheet = getSheet(sheetName);
+    var sheet = getSheet(sheetName);
     if (!sheet) {
       return null;
     }

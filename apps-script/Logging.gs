@@ -9,7 +9,7 @@
  * Action type constants
  * @const {Object}
  */
-const ACTION_TYPES = {
+var ACTION_TYPES = {
   BOOK: 'book',
   CANCEL: 'cancel',
   RESCHEDULE: 'reschedule',
@@ -40,10 +40,10 @@ const ACTION_TYPES = {
  */
 function logActivity(logData) {
   try {
-    const timestamp = getCurrentTimestamp();
-    const user = logData.user || Session.getActiveUser().getEmail() || 'system';
+    var timestamp = getCurrentTimestamp();
+    var user = logData.user || Session.getActiveUser().getEmail() || 'system';
 
-    const rowData = [
+    var rowData = [
       timestamp,
       logData.actionType || '',
       logData.appointmentId || '',
@@ -55,9 +55,9 @@ function logActivity(logData) {
       logData.notes || ''
     ];
 
-    const rowNum = addRow(SHEETS.ACTIVITY_LOG, rowData);
+    var logId = addRow(SHEETS.ACTIVITY_LOG, rowData);
 
-    if (rowNum > 0) {
+    if (logId) {
       Logger.log(`Activity logged: ${logData.actionType} for ${logData.appointmentId || 'N/A'}`);
       return true;
     }
@@ -121,7 +121,7 @@ function logCancellation(appointmentId, clientId, providerId, previousStatus, no
  * @returns {boolean} True if successful
  */
 function logStatusChange(appointmentId, clientId, providerId, previousStatus, newStatus, notes) {
-  let actionType = ACTION_TYPES.BOOK;
+  var actionType = ACTION_TYPES.BOOK;
 
   // Map status to action type
   switch (newStatus.toLowerCase()) {
@@ -249,8 +249,8 @@ function logCalendarDelete(appointmentId, eventId, notes) {
  * @returns {Array<Object>} Array of log entries
  */
 function getRecentActivityLogs(limit) {
-  const logs = getSheetData(SHEETS.ACTIVITY_LOG);
-  const sortedLogs = logs.sort((a, b) => {
+  var logs = getSheetData(SHEETS.ACTIVITY_LOG);
+  var sortedLogs = logs.sort((a, b) => {
     return new Date(b.timestamp) - new Date(a.timestamp);
   });
 

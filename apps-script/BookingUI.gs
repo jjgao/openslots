@@ -17,6 +17,17 @@ function showBookingSidebar() {
 }
 
 /**
+ * Shows the appointment management sidebar
+ */
+function showAppointmentManagementSidebar() {
+  var html = HtmlService.createHtmlOutputFromFile('AppointmentManagementSidebar')
+    .setTitle('Manage Appointments')
+    .setWidth(400);
+
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
  * Gets data for booking form (providers, services)
  * @returns {Object} Form data with providers and services
  */
@@ -293,4 +304,384 @@ function getClientDetails(clientId) {
     history: history,
     stats: stats
   };
+}
+
+// ============================================================================
+// MVP 4: Appointment Management UI Functions
+// ============================================================================
+
+/**
+ * Search appointments by various criteria
+ * @param {Object} searchParams - Search parameters
+ * @param {string} [searchParams.query] - General search query (client name, appointment ID)
+ * @param {string} [searchParams.startDate] - Start date for range (YYYY-MM-DD)
+ * @param {string} [searchParams.endDate] - End date for range (YYYY-MM-DD)
+ * @param {string} [searchParams.providerId] - Provider ID
+ * @param {string} [searchParams.status] - Appointment status
+ * @returns {Array<Object>} Array of matching appointments with client/provider details
+ */
+function searchAppointmentsForUI(searchParams) {
+  try {
+    Logger.log('searchAppointmentsForUI: Starting with params: ' + JSON.stringify(searchParams));
+
+    var appointments = getAppointments();
+    Logger.log('searchAppointmentsForUI: Got ' + appointments.length + ' appointments');
+
+    var clients = getClients();
+    Logger.log('searchAppointmentsForUI: Got ' + clients.length + ' clients');
+
+    var providers = getProviders();
+    Logger.log('searchAppointmentsForUI: Got ' + providers.length + ' providers');
+
+    var services = getServices();
+    Logger.log('searchAppointmentsForUI: Got ' + services.length + ' services');
+
+    // Create lookup maps
+    var clientMap = {};
+    clients.forEach(function(c) { clientMap[c.client_id] = c; });
+    Logger.log('searchAppointmentsForUI: Created clientMap with ' + Object.keys(clientMap).length + ' entries');
+
+    var providerMap = {};
+    providers.forEach(function(p) { providerMap[p.provider_id] = p; });
+    Logger.log('searchAppointmentsForUI: Created providerMap with ' + Object.keys(providerMap).length + ' entries');
+
+    var serviceMap = {};
+    services.forEach(function(s) { serviceMap[s.service_id] = s; });
+    Logger.log('searchAppointmentsForUI: Created serviceMap with ' + Object.keys(serviceMap).length + ' entries');
+    Logger.log('searchAppointmentsForUI: Service IDs in map: ' + Object.keys(serviceMap).join(', '));
+
+    // Filter appointments
+    var results = appointments.filter(function(apt) {
+      // Filter by query (client name, phone number, or appointment ID)
+      if (searchParams.query) {
+        var query = searchParams.query.toLowerCase();
+        var client = clientMap[apt.client_id];
+        var clientName = client ? client.name.toLowerCase() : '';
+        var clientPhone = client && client.phone ? client.phone.toLowerCase() : '';
+        var aptId = apt.appointment_id.toLowerCase();
+
+        if (clientName.indexOf(query) === -1 &&
+            clientPhone.indexOf(query) === -1 &&
+            aptId.indexOf(query) === -1) {
+          return false;
+        }
+      }
+
+      // Filter by date range
+      var aptDate = normalizeDate(apt.appointment_date);
+
+      // Filter by start date (from)
+      if (searchParams.startDate) {
+        if (aptDate < searchParams.startDate) {
+          return false;
+        }
+      }
+
+      // Filter by end date (to)
+      if (searchParams.endDate) {
+        if (aptDate > searchParams.endDate) {
+          return false;
+        }
+      }
+
+      // Filter by provider
+      if (searchParams.providerId && apt.provider_id !== searchParams.providerId) {
+        return false;
+      }
+
+      // Filter by status
+      if (searchParams.status) {
+        // Handle special status filter values
+        if (searchParams.status === 'ALL_OPEN') {
+          var openStatuses = ['Booked', 'Confirmed', 'Checked-in'];
+          if (openStatuses.indexOf(apt.status) === -1) {
+            return false;
+          }
+        } else if (searchParams.status === 'ALL_CLOSED') {
+          var closedStatuses = ['Rescheduled', 'Cancelled', 'Completed', 'No-show'];
+          if (closedStatuses.indexOf(apt.status) === -1) {
+            return false;
+          }
+        } else {
+          // Regular status filter
+          if (apt.status !== searchParams.status) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
+    Logger.log('searchAppointmentsForUI: After filter, have ' + results.length + ' results');
+
+    // Enhance results with related data
+    var enhancedResults = results.map(function(apt) {
+      // Normalize date to string for sorting
+      var aptDate = normalizeDate(apt.appointment_date);
+
+      // Normalize start_time to string (HH:MM format)
+      var startTime = apt.start_time;
+      if (apt.start_time instanceof Date) {
+        var hours = apt.start_time.getHours();
+        var minutes = apt.start_time.getMinutes();
+        startTime = padZero(hours) + ':' + padZero(minutes);
+      }
+
+      // Debug service lookup
+      var service = serviceMap[apt.service_id];
+      if (!service) {
+        Logger.log('searchAppointmentsForUI: Service NOT FOUND for appointment ' + apt.appointment_id +
+                   ' with service_id: "' + apt.service_id + '" (type: ' + typeof apt.service_id + ')');
+      }
+
+      return {
+        appointment_id: apt.appointment_id,
+        appointment_date: aptDate,
+        start_time: startTime,
+        duration: apt.duration,
+        status: apt.status,
+        notes: apt.notes || '',
+        client_id: apt.client_id,
+        provider_id: apt.provider_id,
+        service_id: apt.service_id,
+        client: clientMap[apt.client_id] || {},
+        provider: providerMap[apt.provider_id] || {},
+        service: service || {}
+      };
+    });
+
+    // Sort by date and time (most recent first)
+    enhancedResults.sort(function(a, b) {
+      if (a.appointment_date !== b.appointment_date) {
+        return b.appointment_date.localeCompare(a.appointment_date);
+      }
+      return b.start_time.localeCompare(a.start_time);
+    });
+
+    Logger.log('searchAppointmentsForUI: Returning ' + enhancedResults.length + ' enhanced results');
+    return enhancedResults;
+
+  } catch (error) {
+    Logger.log('ERROR in searchAppointmentsForUI: ' + error.toString());
+    Logger.log('ERROR stack: ' + error.stack);
+    return [];
+  }
+}
+
+/**
+ * Gets today's appointments for quick access
+ * @returns {Array<Object>} Today's appointments with details
+ */
+function getTodaysAppointmentsForUI() {
+  var today = normalizeDate(new Date());
+  return searchAppointmentsForUI({ date: today });
+}
+
+/**
+ * Cancels an appointment from UI
+ * @param {string} appointmentId - Appointment ID
+ * @param {string} reason - Cancellation reason
+ * @returns {Object} Result object
+ */
+function cancelAppointmentFromUI(appointmentId, reason) {
+  return cancelAppointment(appointmentId, reason);
+}
+
+/**
+ * Reschedules an appointment from UI
+ * @param {string} appointmentId - Appointment ID
+ * @param {Object} options - Reschedule options
+ * @returns {Object} Result object
+ */
+function rescheduleAppointmentFromUI(appointmentId, options) {
+  return rescheduleAppointment(appointmentId, options);
+}
+
+/**
+ * Checks in an appointment from UI
+ * @param {string} appointmentId - Appointment ID
+ * @returns {Object} Result object
+ */
+function checkInAppointmentFromUI(appointmentId) {
+  return checkInAppointment(appointmentId);
+}
+
+/**
+ * Marks appointment as no-show from UI
+ * @param {string} appointmentId - Appointment ID
+ * @param {string} [notes] - Optional notes
+ * @returns {Object} Result object
+ */
+function markNoShowFromUI(appointmentId, notes) {
+  return markNoShow(appointmentId, null, notes);
+}
+
+/**
+ * Completes an appointment from UI
+ * @param {string} appointmentId - Appointment ID
+ * @param {string} [notes] - Optional completion notes
+ * @returns {Object} Result object
+ */
+function completeAppointmentFromUI(appointmentId, notes) {
+  return completeAppointment(appointmentId, null, notes);
+}
+
+/**
+ * Gets full appointment details for management
+ * @param {string} appointmentId - Appointment ID
+ * @returns {Object} Appointment with all related data
+ */
+function getAppointmentDetailsForUI(appointmentId) {
+  try {
+    Logger.log('getAppointmentDetailsForUI: Looking for appointment: ' + appointmentId);
+
+    var appointment = getAppointmentById(appointmentId);
+    Logger.log('getAppointmentDetailsForUI: getAppointmentById returned: ' + (appointment ? 'found' : 'NULL'));
+
+    if (!appointment) {
+      Logger.log('getAppointmentDetailsForUI: Appointment not found, returning null');
+      return null;
+    }
+
+    Logger.log('getAppointmentDetailsForUI: Appointment status: ' + appointment.status);
+
+    var client = getClient(appointment.client_id);
+    Logger.log('getAppointmentDetailsForUI: Client found: ' + (client ? client.name : 'NULL'));
+
+    var provider = getProvider(appointment.provider_id);
+    Logger.log('getAppointmentDetailsForUI: Provider found: ' + (provider ? provider.name : 'NULL'));
+
+    var service = getService(appointment.service_id);
+    Logger.log('getAppointmentDetailsForUI: Service found: ' + (service ? service.name : 'NULL'));
+
+    // Check if appointment is in the past
+    var today = normalizeDate(new Date());
+    var aptDate = normalizeDate(appointment.appointment_date);
+    var isPastAppointment = aptDate < today;
+    Logger.log('getAppointmentDetailsForUI: Is past appointment: ' + isPastAppointment + ' (apt=' + aptDate + ', today=' + today + ')');
+
+    var result = {
+      appointment: appointment,
+      client: client,
+      provider: provider,
+      service: service,
+      canCancel: canTransitionTo(appointment.status, 'Cancelled'),
+      canReschedule: !isPastAppointment && canTransitionTo(appointment.status, 'Rescheduled'),
+      canCheckIn: !isPastAppointment && canTransitionTo(appointment.status, 'Checked-in'),
+      canMarkNoShow: canTransitionTo(appointment.status, 'No-show'),
+      canComplete: canTransitionTo(appointment.status, 'Completed')
+    };
+
+    Logger.log('getAppointmentDetailsForUI: Returning result with canCancel=' + result.canCancel);
+    return result;
+
+  } catch (error) {
+    Logger.log('ERROR in getAppointmentDetailsForUI: ' + error.toString());
+    Logger.log('ERROR stack: ' + error.stack);
+    return null;
+  }
+}
+
+/**
+ * Gets past appointments with open statuses that need review
+ * Returns appointments where date < today AND status is Booked, Confirmed, or Checked-in
+ * Note: Rescheduled is now a finalized status (creates new appointment, closes old one)
+ * @returns {Array<Object>} Array of past open appointments with details
+ */
+function getPastOpenAppointmentsForUI() {
+  try {
+    Logger.log('getPastOpenAppointmentsForUI: Starting...');
+
+    var today = normalizeDate(new Date());
+    Logger.log('getPastOpenAppointmentsForUI: Today is ' + today);
+
+    var appointments = getAppointments();
+    var clients = getClients();
+    var providers = getProviders();
+    var services = getServices();
+
+    // Create lookup maps
+    var clientMap = {};
+    clients.forEach(function(c) { clientMap[c.client_id] = c; });
+
+    var providerMap = {};
+    providers.forEach(function(p) { providerMap[p.provider_id] = p; });
+
+    var serviceMap = {};
+    services.forEach(function(s) { serviceMap[s.service_id] = s; });
+
+    // Define open statuses that need closure (Rescheduled is now finalized)
+    var openStatuses = ['Booked', 'Confirmed', 'Checked-in'];
+
+    // Filter appointments: past date AND open status
+    var results = appointments.filter(function(apt) {
+      var aptDate = normalizeDate(apt.appointment_date);
+
+      // Check if date is in the past (before today)
+      if (aptDate >= today) {
+        return false;
+      }
+
+      // Check if status is open (needs closure)
+      if (openStatuses.indexOf(apt.status) === -1) {
+        return false;
+      }
+
+      return true;
+    });
+
+    Logger.log('getPastOpenAppointmentsForUI: Found ' + results.length + ' past open appointments');
+
+    // Enhance results with related data
+    var enhancedResults = results.map(function(apt) {
+      var aptDate = normalizeDate(apt.appointment_date);
+
+      // Normalize start_time to string (HH:MM format)
+      var startTime = apt.start_time;
+      if (apt.start_time instanceof Date) {
+        var hours = apt.start_time.getHours();
+        var minutes = apt.start_time.getMinutes();
+        startTime = padZero(hours) + ':' + padZero(minutes);
+      }
+
+      return {
+        appointment_id: apt.appointment_id,
+        appointment_date: aptDate,
+        start_time: startTime,
+        duration: apt.duration,
+        status: apt.status,
+        notes: apt.notes || '',
+        client_id: apt.client_id,
+        provider_id: apt.provider_id,
+        service_id: apt.service_id,
+        client: clientMap[apt.client_id] || {},
+        provider: providerMap[apt.provider_id] || {},
+        service: serviceMap[apt.service_id] || {}
+      };
+    });
+
+    // Sort by date (oldest first) so user can work through them chronologically
+    enhancedResults.sort(function(a, b) {
+      if (a.appointment_date !== b.appointment_date) {
+        return a.appointment_date.localeCompare(b.appointment_date);
+      }
+      return a.start_time.localeCompare(b.start_time);
+    });
+
+    Logger.log('getPastOpenAppointmentsForUI: Returning ' + enhancedResults.length + ' enhanced results');
+    return enhancedResults;
+
+  } catch (error) {
+    Logger.log('ERROR in getPastOpenAppointmentsForUI: ' + error.toString());
+    Logger.log('ERROR stack: ' + error.stack);
+    return [];
+  }
+}
+
+/**
+ * Shows the appointment management sidebar for reviewing past open appointments
+ * This is called from the menu: Appointment System → Review Past Appointments
+ */
+function reviewPastAppointments() {
+  showAppointmentManagementSidebar();
 }

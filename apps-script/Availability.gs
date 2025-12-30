@@ -15,11 +15,12 @@
  *
  * @param {string} providerId - The provider ID
  * @param {Date|string} date - The date to check
+ * @param {string} [excludeAppointmentId] - Optional appointment ID to exclude from conflicts (for rescheduling)
  * @returns {Array<Object>} Array of available time windows {start, end}
  */
-function getProviderAvailability(providerId, date) {
-  const targetDate = typeof date === 'string' ? parseDateInTimezone(date) : date;
-  const dayName = getDayName(targetDate);
+function getProviderAvailability(providerId, date, excludeAppointmentId) {
+  var targetDate = typeof date === 'string' ? parseDateInTimezone(date) : date;
+  var dayName = getDayName(targetDate);
 
   // Step 1: Check if it's a business holiday
   if (isBusinessHoliday(targetDate)) {
@@ -28,7 +29,7 @@ function getProviderAvailability(providerId, date) {
   }
 
   // Step 2: Get recurring availability for this day of week
-  let availableWindows = getRecurringAvailability(providerId, dayName, targetDate);
+  var availableWindows = getRecurringAvailability(providerId, dayName, targetDate);
 
   if (availableWindows.length === 0) {
     Logger.log(`No recurring availability for ${providerId} on ${dayName}`);
@@ -42,7 +43,7 @@ function getProviderAvailability(providerId, date) {
   availableWindows = subtractBusinessExceptions(targetDate, availableWindows);
 
   // Step 5: Subtract existing appointments
-  availableWindows = subtractExistingAppointments(providerId, targetDate, availableWindows);
+  availableWindows = subtractExistingAppointments(providerId, targetDate, availableWindows, excludeAppointmentId);
 
   return availableWindows;
 }
@@ -55,11 +56,11 @@ function getProviderAvailability(providerId, date) {
  * @returns {Array<Object>} Array of time windows
  */
 function getRecurringAvailability(providerId, dayName, targetDate) {
-  const availabilityRecords = getProviderAvailabilityRecords(providerId);
-  const windows = [];
+  var availabilityRecords = getProviderAvailabilityRecords(providerId);
+  var windows = [];
 
-  for (let i = 0; i < availabilityRecords.length; i++) {
-    const record = availabilityRecords[i];
+  for (var i = 0; i < availabilityRecords.length; i++) {
+    var record = availabilityRecords[i];
 
     // Check if this record applies to the day of week
     if (record.day_of_week !== dayName) {
@@ -70,13 +71,13 @@ function getRecurringAvailability(providerId, dayName, targetDate) {
     if (record.is_recurring !== 'Yes') {
       // Non-recurring: check effective dates
       if (record.effective_date_start) {
-        const effectiveStart = new Date(record.effective_date_start);
+        var effectiveStart = new Date(record.effective_date_start);
         if (targetDate < effectiveStart) {
           continue;
         }
       }
       if (record.effective_date_end) {
-        const effectiveEnd = new Date(record.effective_date_end);
+        var effectiveEnd = new Date(record.effective_date_end);
         if (targetDate > effectiveEnd) {
           continue;
         }
@@ -102,10 +103,10 @@ function getRecurringAvailability(providerId, dayName, targetDate) {
  * @returns {Array<Object>} Updated windows
  */
 function subtractProviderExceptions(providerId, targetDate, windows) {
-  const exceptions = getProviderExceptionsForDate(providerId, targetDate);
+  var exceptions = getProviderExceptionsForDate(providerId, targetDate);
 
-  for (let i = 0; i < exceptions.length; i++) {
-    const exc = exceptions[i];
+  for (var i = 0; i < exceptions.length; i++) {
+    var exc = exceptions[i];
 
     // If no times specified, the entire day is blocked
     if (!exc.start_time || !exc.end_time ||
@@ -113,8 +114,8 @@ function subtractProviderExceptions(providerId, targetDate, windows) {
       return [];
     }
 
-    const excStart = parseTimeToMinutes(exc.start_time);
-    const excEnd = parseTimeToMinutes(exc.end_time);
+    var excStart = parseTimeToMinutes(exc.start_time);
+    var excEnd = parseTimeToMinutes(exc.end_time);
 
     windows = subtractTimeRange(windows, excStart, excEnd);
   }
@@ -129,17 +130,17 @@ function subtractProviderExceptions(providerId, targetDate, windows) {
  * @returns {Array<Object>} Updated windows
  */
 function subtractBusinessExceptions(targetDate, windows) {
-  const exceptions = getBusinessExceptionsForDate(targetDate);
+  var exceptions = getBusinessExceptionsForDate(targetDate);
 
-  for (let i = 0; i < exceptions.length; i++) {
-    const exc = exceptions[i];
+  for (var i = 0; i < exceptions.length; i++) {
+    var exc = exceptions[i];
 
     if (!exc.start_time || !exc.end_time) {
       continue;
     }
 
-    const excStart = parseTimeToMinutes(exc.start_time);
-    const excEnd = parseTimeToMinutes(exc.end_time);
+    var excStart = parseTimeToMinutes(exc.start_time);
+    var excEnd = parseTimeToMinutes(exc.end_time);
 
     windows = subtractTimeRange(windows, excStart, excEnd);
   }
@@ -149,19 +150,40 @@ function subtractBusinessExceptions(targetDate, windows) {
 
 /**
  * Subtracts existing appointments from available windows
+ * Only active appointments block time slots; closed appointments do not
  * @param {string} providerId - The provider ID
  * @param {Date} targetDate - The date
- * @param {Array<Object>} windows - Current available windows
- * @returns {Array<Object>} Updated windows
+ * @param {Array<Object>} windows - Available windows
+ * @param {string} [excludeAppointmentId] - Optional appointment ID to exclude (for rescheduling)
+ * @returns {Array<Object>} Windows with appointments subtracted
  */
-function subtractExistingAppointments(providerId, targetDate, windows) {
-  const appointments = getProviderAppointments(providerId, targetDate);
+function subtractExistingAppointments(providerId, targetDate, windows, excludeAppointmentId) {
+  var appointments = getProviderAppointments(providerId, targetDate);
 
-  for (let i = 0; i < appointments.length; i++) {
-    const apt = appointments[i];
+  // Define active statuses that block time slots
+  var activeStatuses = ['Booked', 'Confirmed', 'Checked-in'];
 
-    const aptStart = parseTimeToMinutes(apt.start_time);
-    const aptEnd = parseTimeToMinutes(apt.end_time);
+  // Closed statuses that do NOT block time slots:
+  // 'Rescheduled' - client isn't coming (new appointment created)
+  // 'Cancelled' - appointment was cancelled
+  // 'Completed' - already happened
+  // 'No-show' - client didn't show up
+
+  for (var i = 0; i < appointments.length; i++) {
+    var apt = appointments[i];
+
+    // Skip the excluded appointment (for reschedule scenarios)
+    if (excludeAppointmentId && apt.appointment_id === excludeAppointmentId) {
+      continue;
+    }
+
+    // Skip closed appointments - they don't block the calendar
+    if (activeStatuses.indexOf(apt.status) === -1) {
+      continue;
+    }
+
+    var aptStart = parseTimeToMinutes(apt.start_time);
+    var aptEnd = parseTimeToMinutes(apt.end_time);
 
     windows = subtractTimeRange(windows, aptStart, aptEnd);
   }
@@ -177,18 +199,18 @@ function subtractExistingAppointments(providerId, targetDate, windows) {
  * @returns {Array<Object>} Array of available slots {startTime, endTime}
  */
 function getAvailableSlots(providerId, date, duration) {
-  const availableWindows = getProviderAvailability(providerId, date);
+  var availableWindows = getProviderAvailability(providerId, date);
 
   if (availableWindows.length === 0) {
     return [];
   }
 
-  const slotIncrement = getSlotIncrement();
-  const slots = [];
+  var slotIncrement = getSlotIncrement();
+  var slots = [];
 
-  for (let i = 0; i < availableWindows.length; i++) {
-    const window = availableWindows[i];
-    let currentStart = window.start;
+  for (var i = 0; i < availableWindows.length; i++) {
+    var window = availableWindows[i];
+    var currentStart = window.start;
 
     // Generate slots within this window
     while (currentStart + duration <= window.end) {
@@ -210,21 +232,22 @@ function getAvailableSlots(providerId, date, duration) {
  * @param {Date|string} date - The date
  * @param {string} startTime - Start time (HH:MM)
  * @param {number} duration - Duration in minutes
+ * @param {string} [excludeAppointmentId] - Optional appointment ID to exclude from conflicts (for rescheduling)
  * @returns {boolean} True if slot is available
  */
-function isSlotAvailable(providerId, date, startTime, duration) {
-  const availableWindows = getProviderAvailability(providerId, date);
+function isSlotAvailable(providerId, date, startTime, duration, excludeAppointmentId) {
+  var availableWindows = getProviderAvailability(providerId, date, excludeAppointmentId);
 
   if (availableWindows.length === 0) {
     return false;
   }
 
-  const slotStart = parseTimeToMinutes(startTime);
-  const slotEnd = slotStart + duration;
+  var slotStart = parseTimeToMinutes(startTime);
+  var slotEnd = slotStart + duration;
 
   // Check if the slot fits within any available window
-  for (let i = 0; i < availableWindows.length; i++) {
-    const window = availableWindows[i];
+  for (var i = 0; i < availableWindows.length; i++) {
+    var window = availableWindows[i];
 
     if (slotStart >= window.start && slotEnd <= window.end) {
       return true;
@@ -247,11 +270,11 @@ function mergeTimeWindows(windows) {
   // Sort by start time
   windows.sort((a, b) => a.start - b.start);
 
-  const merged = [windows[0]];
+  var merged = [windows[0]];
 
-  for (let i = 1; i < windows.length; i++) {
-    const current = windows[i];
-    const last = merged[merged.length - 1];
+  for (var i = 1; i < windows.length; i++) {
+    var current = windows[i];
+    var last = merged[merged.length - 1];
 
     if (current.start <= last.end) {
       // Overlapping or adjacent, merge
@@ -273,10 +296,10 @@ function mergeTimeWindows(windows) {
  * @returns {Array<Object>} Updated windows
  */
 function subtractTimeRange(windows, subtractStart, subtractEnd) {
-  const result = [];
+  var result = [];
 
-  for (let i = 0; i < windows.length; i++) {
-    const window = windows[i];
+  for (var i = 0; i < windows.length; i++) {
+    var window = windows[i];
 
     // No overlap
     if (subtractEnd <= window.start || subtractStart >= window.end) {
@@ -331,17 +354,17 @@ function subtractTimeRange(windows, subtractStart, subtractEnd) {
  * @returns {Object} Object with dates as keys and availability as values
  */
 function getAvailabilitySummary(providerId, startDate, endDate) {
-  const summary = {};
-  const dates = getDateRange(startDate, endDate);
+  var summary = {};
+  var dates = getDateRange(startDate, endDate);
 
-  for (let i = 0; i < dates.length; i++) {
-    const date = dates[i];
-    const dateStr = normalizeDate(date);
-    const windows = getProviderAvailability(providerId, date);
+  for (var i = 0; i < dates.length; i++) {
+    var date = dates[i];
+    var dateStr = normalizeDate(date);
+    var windows = getProviderAvailability(providerId, date);
 
     // Calculate total available minutes
-    let totalMinutes = 0;
-    for (let j = 0; j < windows.length; j++) {
+    var totalMinutes = 0;
+    for (var j = 0; j < windows.length; j++) {
       totalMinutes += windows[j].end - windows[j].start;
     }
 
@@ -366,11 +389,11 @@ function getAvailabilitySummary(providerId, startDate, endDate) {
  * @returns {Object|null} Next available slot or null
  */
 function findNextAvailableSlot(providerId, duration, maxDaysAhead) {
-  const maxDays = maxDaysAhead || 30;
-  let currentDate = new Date();
+  var maxDays = maxDaysAhead || 30;
+  var currentDate = new Date();
 
-  for (let i = 0; i < maxDays; i++) {
-    const slots = getAvailableSlots(providerId, currentDate, duration);
+  for (var i = 0; i < maxDays; i++) {
+    var slots = getAvailableSlots(providerId, currentDate, duration);
 
     if (slots.length > 0) {
       return {

@@ -20,18 +20,18 @@
 function bookAppointment(appointmentData) {
   try {
     // Step 1: Validate required fields
-    const validationResult = validateAppointmentData(appointmentData);
+    var validationResult = validateAppointmentData(appointmentData);
     if (!validationResult.valid) {
       return { success: false, error: validationResult.error };
     }
 
     // Step 2: Validate entities exist
-    const client = getClient(appointmentData.clientId);
+    var client = getClient(appointmentData.clientId);
     if (!client) {
       return { success: false, error: `Client not found: ${appointmentData.clientId}` };
     }
 
-    const provider = getProvider(appointmentData.providerId);
+    var provider = getProvider(appointmentData.providerId);
     if (!provider) {
       return { success: false, error: `Provider not found: ${appointmentData.providerId}` };
     }
@@ -40,13 +40,13 @@ function bookAppointment(appointmentData) {
       return { success: false, error: `Provider is not active: ${appointmentData.providerId}` };
     }
 
-    const service = getService(appointmentData.serviceId);
+    var service = getService(appointmentData.serviceId);
     if (!service) {
       return { success: false, error: `Service not found: ${appointmentData.serviceId}` };
     }
 
     // Step 3: Validate date/time
-    const dateValidation = validateAppointmentDateTime(
+    var dateValidation = validateAppointmentDateTime(
       appointmentData.date,
       appointmentData.startTime
     );
@@ -55,7 +55,7 @@ function bookAppointment(appointmentData) {
     }
 
     // Step 4: Check slot availability
-    const isAvailable = isSlotAvailable(
+    var isAvailable = isSlotAvailable(
       appointmentData.providerId,
       appointmentData.date,
       appointmentData.startTime,
@@ -70,11 +70,11 @@ function bookAppointment(appointmentData) {
     }
 
     // Step 5: Calculate end time
-    const endTime = calculateEndTime(appointmentData.startTime, appointmentData.duration);
+    var endTime = calculateEndTime(appointmentData.startTime, appointmentData.duration);
 
     // Step 6: Create appointment record
-    const today = formatDateYMD(new Date());
-    const rowData = [
+    var today = formatDateYMD(new Date());
+    var rowData = [
       appointmentData.clientId,
       appointmentData.providerId,
       appointmentData.serviceId,
@@ -88,15 +88,10 @@ function bookAppointment(appointmentData) {
       '' // calendar_event_id - will be updated after calendar sync
     ];
 
-    const rowNum = addRow(SHEETS.APPOINTMENTS, rowData);
-    if (rowNum < 0) {
-      return { success: false, error: 'Failed to create appointment record' };
-    }
-
-    // Get the generated appointment ID
-    const appointmentId = getGeneratedId(SHEETS.APPOINTMENTS, rowNum);
+    // Add appointment row (returns generated ID directly)
+    var appointmentId = addRow(SHEETS.APPOINTMENTS, rowData);
     if (!appointmentId) {
-      return { success: false, error: 'Failed to generate appointment ID' };
+      return { success: false, error: 'Failed to create appointment record' };
     }
 
     // Step 7: Create calendar event (unless explicitly disabled)
@@ -131,7 +126,7 @@ function bookAppointment(appointmentData) {
         providerId: appointmentData.providerId,
         providerName: provider.name,
         serviceId: appointmentData.serviceId,
-        serviceName: service.service_name,
+        serviceName: service.name,
         date: appointmentData.date,
         startTime: appointmentData.startTime,
         endTime: endTime,
@@ -198,8 +193,8 @@ function validateAppointmentData(data) {
  * @returns {Object} Validation result {valid, error}
  */
 function validateAppointmentDateTime(date, startTime) {
-  const appointmentDate = parseDateInTimezone(date);
-  const today = new Date();
+  var appointmentDate = parseDateInTimezone(date);
+  var today = new Date();
   today.setHours(0, 0, 0, 0);
   appointmentDate.setHours(0, 0, 0, 0);
 
@@ -209,8 +204,8 @@ function validateAppointmentDateTime(date, startTime) {
   }
 
   // Check if date is too far in the future
-  const maxDays = getMaxAdvanceBookingDays();
-  const maxDate = addDays(today, maxDays);
+  var maxDays = getMaxAdvanceBookingDays();
+  var maxDate = addDays(today, maxDays);
   if (appointmentDate > maxDate) {
     return {
       valid: false,
@@ -220,8 +215,8 @@ function validateAppointmentDateTime(date, startTime) {
 
   // If booking for today, check if the time hasn't passed
   if (isSameDate(appointmentDate, today)) {
-    const now = new Date();
-    const appointmentDateTime = combineDateAndTime(date, startTime);
+    var now = new Date();
+    var appointmentDateTime = combineDateAndTime(date, startTime);
 
     if (appointmentDateTime <= now) {
       return { valid: false, error: 'Cannot book appointments in the past' };
@@ -231,72 +226,8 @@ function validateAppointmentDateTime(date, startTime) {
   return { valid: true };
 }
 
-/**
- * Cancels an appointment
- * @param {string} appointmentId - The appointment ID
- * @param {string} [reason] - Cancellation reason
- * @returns {Object} Result with success status
- */
-function cancelAppointment(appointmentId, reason) {
-  try {
-    const appointment = getAppointment(appointmentId);
-    if (!appointment) {
-      return { success: false, error: 'Appointment not found' };
-    }
-
-    // Check if already cancelled
-    if (appointment.status === 'Cancelled') {
-      return { success: false, error: 'Appointment is already cancelled' };
-    }
-
-    // Check cancellation notice policy
-    if (isTodayOrFuture(appointment.appointment_date)) {
-      const appointmentDateTime = combineDateAndTime(
-        appointment.appointment_date,
-        appointment.start_time
-      );
-      const now = new Date();
-      const hoursUntil = (appointmentDateTime - now) / (1000 * 60 * 60);
-      const minNotice = getMinCancellationNoticeHours();
-
-      if (hoursUntil < minNotice && hoursUntil > 0) {
-        Logger.log(`Warning: Cancellation within ${minNotice} hour notice period`);
-        // We'll still allow it but log the warning
-      }
-    }
-
-    const previousStatus = appointment.status;
-
-    // Update appointment status
-    const updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
-      status: 'Cancelled'
-    });
-
-    if (!updated) {
-      return { success: false, error: 'Failed to update appointment' };
-    }
-
-    // Delete calendar event
-    deleteCalendarEvent(appointmentId);
-
-    // Log the cancellation
-    logCancellation(
-      appointmentId,
-      appointment.client_id,
-      appointment.provider_id,
-      previousStatus,
-      reason || 'Appointment cancelled'
-    );
-
-    Logger.log(`Appointment cancelled: ${appointmentId}`);
-
-    return { success: true };
-
-  } catch (error) {
-    Logger.log(`Error cancelling appointment: ${error.toString()}`);
-    return { success: false, error: error.toString() };
-  }
-}
+// Note: cancelAppointment() and rescheduleAppointment() are now in AppointmentManagement.gs
+// with enhanced functionality including status transition validation and comprehensive logging.
 
 /**
  * Updates appointment status
@@ -307,12 +238,12 @@ function cancelAppointment(appointmentId, reason) {
  */
 function updateAppointmentStatus(appointmentId, newStatus, notes) {
   try {
-    const appointment = getAppointment(appointmentId);
+    var appointment = getAppointment(appointmentId);
     if (!appointment) {
       return { success: false, error: 'Appointment not found' };
     }
 
-    const validStatuses = [
+    var validStatuses = [
       'Booked', 'Confirmed', 'Checked-in', 'Completed',
       'No-show', 'Cancelled', 'Rescheduled'
     ];
@@ -321,17 +252,17 @@ function updateAppointmentStatus(appointmentId, newStatus, notes) {
       return { success: false, error: `Invalid status: ${newStatus}` };
     }
 
-    const previousStatus = appointment.status;
+    var previousStatus = appointment.status;
 
     // Update the status
-    const updates = { status: newStatus };
+    var updates = { status: newStatus };
     if (notes) {
       updates.notes = appointment.notes
         ? `${appointment.notes}\n[${newStatus}] ${notes}`
         : `[${newStatus}] ${notes}`;
     }
 
-    const updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, updates);
+    var updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, updates);
 
     if (!updated) {
       return { success: false, error: 'Failed to update appointment' };
@@ -370,88 +301,6 @@ function updateAppointmentStatus(appointmentId, newStatus, notes) {
 }
 
 /**
- * Reschedules an appointment
- * @param {string} appointmentId - The appointment ID
- * @param {string} newDate - New date
- * @param {string} newStartTime - New start time
- * @param {string} [notes] - Optional notes
- * @returns {Object} Result with success status
- */
-function rescheduleAppointment(appointmentId, newDate, newStartTime, notes) {
-  try {
-    const appointment = getAppointment(appointmentId);
-    if (!appointment) {
-      return { success: false, error: 'Appointment not found' };
-    }
-
-    // Validate new date/time
-    const dateValidation = validateAppointmentDateTime(newDate, newStartTime);
-    if (!dateValidation.valid) {
-      return { success: false, error: dateValidation.error };
-    }
-
-    // Check availability for new slot
-    const isAvailable = isSlotAvailable(
-      appointment.provider_id,
-      newDate,
-      newStartTime,
-      appointment.duration
-    );
-
-    if (!isAvailable) {
-      return {
-        success: false,
-        error: 'New time slot is not available'
-      };
-    }
-
-    const previousDate = appointment.appointment_date;
-    const previousTime = appointment.start_time;
-    const newEndTime = calculateEndTime(newStartTime, appointment.duration);
-
-    // Update appointment
-    const updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, {
-      appointment_date: newDate,
-      start_time: newStartTime,
-      end_time: newEndTime,
-      status: 'Rescheduled'
-    });
-
-    if (!updated) {
-      return { success: false, error: 'Failed to update appointment' };
-    }
-
-    // Update calendar event
-    updateCalendarEvent(appointmentId);
-
-    // Log the reschedule
-    logActivity({
-      actionType: ACTION_TYPES.RESCHEDULE,
-      appointmentId: appointmentId,
-      clientId: appointment.client_id,
-      providerId: appointment.provider_id,
-      previousValue: `${normalizeDate(previousDate)} ${previousTime}`,
-      newValue: `${newDate} ${newStartTime}`,
-      notes: notes || 'Appointment rescheduled'
-    });
-
-    Logger.log(`Appointment ${appointmentId} rescheduled to ${newDate} ${newStartTime}`);
-
-    return {
-      success: true,
-      previousDate: normalizeDate(previousDate),
-      previousTime: previousTime,
-      newDate: newDate,
-      newTime: newStartTime
-    };
-
-  } catch (error) {
-    Logger.log(`Error rescheduling appointment: ${error.toString()}`);
-    return { success: false, error: error.toString() };
-  }
-}
-
-/**
  * Gets appointments for today
  * @returns {Array<Object>} Today's appointments
  */
@@ -466,10 +315,10 @@ function getTodayAppointments() {
  * @returns {Array<Object>} Upcoming appointments
  */
 function getClientUpcomingAppointments(clientId, limit) {
-  const appointments = getAppointments();
-  const today = normalizeDate(new Date());
+  var appointments = getAppointments();
+  var today = normalizeDate(new Date());
 
-  const upcoming = appointments.filter(apt =>
+  var upcoming = appointments.filter(apt =>
     apt.client_id === clientId &&
     normalizeDate(apt.appointment_date) >= today &&
     !['Cancelled', 'No-show', 'Completed'].includes(apt.status)
@@ -477,8 +326,8 @@ function getClientUpcomingAppointments(clientId, limit) {
 
   // Sort by date/time
   upcoming.sort((a, b) => {
-    const dateA = `${normalizeDate(a.appointment_date)} ${a.start_time}`;
-    const dateB = `${normalizeDate(b.appointment_date)} ${b.start_time}`;
+    var dateA = `${normalizeDate(a.appointment_date)} ${a.start_time}`;
+    var dateB = `${normalizeDate(b.appointment_date)} ${b.start_time}`;
     return dateA.localeCompare(dateB);
   });
 
@@ -495,20 +344,20 @@ function getClientUpcomingAppointments(clientId, limit) {
  * @returns {boolean} True if there's a conflict
  */
 function hasAppointmentConflict(providerId, date, startTime, duration, excludeAppointmentId) {
-  const appointments = getProviderAppointments(providerId, date);
-  const newStart = parseTimeToMinutes(startTime);
-  const newEnd = newStart + duration;
+  var appointments = getProviderAppointments(providerId, date);
+  var newStart = parseTimeToMinutes(startTime);
+  var newEnd = newStart + duration;
 
-  for (let i = 0; i < appointments.length; i++) {
-    const apt = appointments[i];
+  for (var i = 0; i < appointments.length; i++) {
+    var apt = appointments[i];
 
     // Skip the excluded appointment
     if (excludeAppointmentId && apt.appointment_id === excludeAppointmentId) {
       continue;
     }
 
-    const aptStart = parseTimeToMinutes(apt.start_time);
-    const aptEnd = parseTimeToMinutes(apt.end_time);
+    var aptStart = parseTimeToMinutes(apt.start_time);
+    var aptEnd = parseTimeToMinutes(apt.end_time);
 
     // Check for overlap
     if (newStart < aptEnd && aptStart < newEnd) {
