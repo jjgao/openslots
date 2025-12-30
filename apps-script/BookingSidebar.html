@@ -207,13 +207,6 @@
       <div class="section-title">2. Appointment Details</div>
 
       <div class="form-group">
-        <label for="provider">Provider *</label>
-        <select id="provider" onchange="checkAvailability()">
-          <option value="">Select provider...</option>
-        </select>
-      </div>
-
-      <div class="form-group">
         <label for="service">Service *</label>
         <select id="service" onchange="onServiceChange()">
           <option value="">Select service...</option>
@@ -222,14 +215,21 @@
 
       <div class="form-group" id="durationGroup" class="hidden">
         <label for="duration">Duration *</label>
-        <select id="duration" onchange="checkAvailability()">
+        <select id="duration" onchange="onDurationChange()">
           <option value="">Select duration...</option>
         </select>
       </div>
 
       <div class="form-group">
         <label for="appointmentDate">Date *</label>
-        <input type="date" id="appointmentDate" onchange="checkAvailability()">
+        <input type="date" id="appointmentDate" onchange="onDateChange()">
+      </div>
+
+      <div class="form-group">
+        <label for="provider">Provider *</label>
+        <select id="provider" onchange="onProviderChange()">
+          <option value="">Select provider...</option>
+        </select>
       </div>
 
       <div class="form-group" id="timeSlotsGroup" class="hidden">
@@ -275,7 +275,10 @@
       providers.forEach(function(p) {
         var option = document.createElement('option');
         option.value = p.provider_id;
-        option.textContent = p.name;
+        option.dataset.providerName = p.name; // Store original name
+        option.dataset.slotCount = '-1'; // Initialize (no availability data yet)
+        option.dataset.isReturning = 'false'; // Initialize (no returning indicator)
+        option.textContent = p.name; // Start with just name
         select.appendChild(option);
       });
     }
@@ -467,6 +470,7 @@
         durationGroup.classList.remove('hidden');
       }
 
+      updateProviderAvailability(); // Update provider availability when service changes
       checkAvailability();
     }
 
@@ -625,6 +629,153 @@
 
     function hideSuccess(elementId) {
       document.getElementById(elementId).classList.add('hidden');
+    }
+
+    // ========== Provider Availability Indicators ==========
+
+    /**
+     * Formats provider option text with availability and returning indicator
+     * @param {string} providerName - The provider's name
+     * @param {number} slotCount - Number of available slots (-1 = no data, 0 = unavailable, >0 = available)
+     * @param {boolean} isReturningProvider - True if this provider has served this client before
+     * @returns {string} Formatted text for dropdown option
+     */
+    function formatProviderOption(providerName, slotCount, isReturningProvider) {
+      var text = providerName;
+
+      // Add availability info if we have it
+      if (slotCount === 0) {
+        text += ' (No slots available)';
+      } else if (slotCount > 0) {
+        text += ' (' + slotCount + ' slot' + (slotCount === 1 ? '' : 's') + ' available)';
+      }
+      // If slotCount === -1, no availability info (show name only)
+
+      // Add returning indicator
+      if (isReturningProvider) {
+        text += ' ★ Returning';
+      }
+
+      return text;
+    }
+
+    /**
+     * Updates provider dropdown with availability indicators
+     * Triggered when service, duration, or date changes
+     */
+    function updateProviderAvailability() {
+      var clientId = selectedClient ? selectedClient.client_id : null;
+      var serviceId = document.getElementById('service').value;
+      var duration = document.getElementById('duration').value;
+      var date = document.getElementById('appointmentDate').value;
+
+      // Need date and duration to calculate availability
+      if (!date || !duration) {
+        resetProviderDropdown();
+        return;
+      }
+
+      var providerSelect = document.getElementById('provider');
+      var currentSelection = providerSelect.value;
+
+      // Call backend to get availability for all providers
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            updateProviderDropdownOptions(result.providers, currentSelection);
+          } else {
+            console.error('Error getting provider availability:', result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Failed to get provider availability:', error);
+        })
+        .getAllProvidersAvailability(serviceId, date, parseInt(duration), clientId);
+    }
+
+    /**
+     * Updates provider dropdown options with availability counts and returning indicators
+     * @param {Array} providers - Array of provider data from backend
+     * @param {string} currentSelection - The currently selected provider ID
+     */
+    function updateProviderDropdownOptions(providers, currentSelection) {
+      var select = document.getElementById('provider');
+
+      // Update each option (skip index 0 which is the placeholder "Select provider...")
+      for (var i = 1; i < select.options.length; i++) {
+        var option = select.options[i];
+        var providerId = option.value;
+
+        // Find matching provider data
+        var providerData = providers.find(function(p) {
+          return p.provider_id === providerId;
+        });
+
+        if (providerData) {
+          option.dataset.slotCount = providerData.slot_count.toString();
+          option.dataset.isReturning = providerData.is_returning_provider.toString();
+
+          var providerName = option.dataset.providerName;
+          option.textContent = formatProviderOption(
+            providerName,
+            providerData.slot_count,
+            providerData.is_returning_provider
+          );
+        }
+      }
+
+      // Restore previous selection if it exists
+      if (currentSelection) {
+        select.value = currentSelection;
+      }
+    }
+
+    /**
+     * Resets provider dropdown to show names without availability
+     */
+    function resetProviderDropdown() {
+      var select = document.getElementById('provider');
+      var currentSelection = select.value;
+
+      // Reset each option to show name only
+      for (var i = 1; i < select.options.length; i++) {
+        var option = select.options[i];
+        var providerName = option.dataset.providerName;
+
+        if (providerName) {
+          option.dataset.slotCount = '-1';
+          option.dataset.isReturning = 'false';
+          option.textContent = providerName;
+        }
+      }
+
+      // Restore selection
+      if (currentSelection) {
+        select.value = currentSelection;
+      }
+    }
+
+    /**
+     * Handler for provider selection change
+     */
+    function onProviderChange() {
+      checkAvailability(); // Existing behavior - fetch time slots
+    }
+
+    /**
+     * Handler for duration change
+     */
+    function onDurationChange() {
+      updateProviderAvailability(); // Update provider availability
+      checkAvailability(); // Fetch time slots
+    }
+
+    /**
+     * Handler for date change
+     */
+    function onDateChange() {
+      updateProviderAvailability(); // Update provider availability
+      checkAvailability(); // Fetch time slots
     }
   </script>
 </body>

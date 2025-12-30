@@ -685,3 +685,164 @@ function getPastOpenAppointmentsForUI() {
 function reviewPastAppointments() {
   showAppointmentManagementSidebar();
 }
+
+// ============================================================================
+// Provider Availability Indicators for Booking UI
+// ============================================================================
+
+/**
+ * Gets list of providers who have previously served this client for this service
+ * Used to show "★ Returning" indicators in the booking UI dropdown
+ * @param {string} clientId - The client ID
+ * @param {string} serviceId - Optional service ID to filter by
+ * @returns {Array<string>} Array of provider IDs who have served this client
+ */
+function getReturningProviders(clientId, serviceId) {
+  try {
+    if (!clientId) {
+      return [];
+    }
+
+    // Get all appointments for this client
+    var appointments = findRecords(SHEETS.APPOINTMENTS, { client_id: clientId });
+
+    if (appointments.length === 0) {
+      return [];
+    }
+
+    // Filter to appointments where service was actually rendered
+    var completedStatuses = ['Completed', 'Checked-in'];
+    var serviceRendered = appointments.filter(function(apt) {
+      // Must be completed or checked-in (actual service provided)
+      if (completedStatuses.indexOf(apt.status) === -1) {
+        return false;
+      }
+
+      // If serviceId provided, must match
+      if (serviceId && apt.service_id !== serviceId) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // Extract unique provider IDs
+    var providerIds = {};
+    serviceRendered.forEach(function(apt) {
+      providerIds[apt.provider_id] = true;
+    });
+
+    return Object.keys(providerIds);
+
+  } catch (error) {
+    Logger.log('Error in getReturningProviders: ' + error.toString());
+    return [];
+  }
+}
+
+/**
+ * Filters providers who offer a specific service
+ * @param {Array<Object>} providers - Array of provider objects
+ * @param {string} serviceId - Service ID to filter by
+ * @returns {Array<Object>} Filtered providers who offer this service
+ */
+function filterProvidersByService(providers, serviceId) {
+  if (!serviceId) {
+    return providers;
+  }
+
+  return providers.filter(function(p) {
+    // services_offered is pipe-separated (e.g., "SERV001|SERV002|SERV003")
+    if (!p.services_offered) {
+      return false;
+    }
+
+    var services = p.services_offered.split('|');
+    return services.indexOf(serviceId) !== -1;
+  });
+}
+
+/**
+ * Gets availability summary for all active providers
+ * Used by booking UI to show slot counts and returning provider indicators in provider dropdown
+ * @param {string} serviceId - Optional service ID to filter providers
+ * @param {string} dateStr - Optional date in YYYY-MM-DD format
+ * @param {number} duration - Optional duration in minutes
+ * @param {string} clientId - Optional client ID to check for returning provider relationships
+ * @returns {Object} Result with provider availability data
+ */
+function getAllProvidersAvailability(serviceId, dateStr, duration, clientId) {
+  try {
+    // Get active providers
+    var providers = getProviders(true);
+
+    // Filter by service if specified
+    if (serviceId) {
+      providers = filterProvidersByService(providers, serviceId);
+    }
+
+    // Get returning providers if client and service specified
+    var returningProviderIds = [];
+    if (clientId && serviceId) {
+      returningProviderIds = getReturningProviders(clientId, serviceId);
+    }
+
+    // If date or duration not provided, return placeholder state
+    if (!dateStr || !duration) {
+      return {
+        success: true,
+        providers: providers.map(function(p) {
+          return {
+            provider_id: p.provider_id,
+            name: p.name,
+            slot_count: -1,
+            is_available: false,
+            is_returning_provider: returningProviderIds.indexOf(p.provider_id) !== -1
+          };
+        })
+      };
+    }
+
+    // Calculate actual availability for each provider
+    var date = parseDateInTimezone(dateStr);
+    var durationNum = parseInt(duration);
+
+    var results = providers.map(function(p) {
+      // Get available time windows
+      var timeBlocks = getProviderAvailability(p.provider_id, date);
+
+      if (timeBlocks.length === 0) {
+        return {
+          provider_id: p.provider_id,
+          name: p.name,
+          slot_count: 0,
+          is_available: false,
+          is_returning_provider: returningProviderIds.indexOf(p.provider_id) !== -1
+        };
+      }
+
+      // Generate slots and count them
+      var slots = generateTimeSlots(timeBlocks, [], durationNum, date);
+
+      return {
+        provider_id: p.provider_id,
+        name: p.name,
+        slot_count: slots.length,
+        is_available: slots.length > 0,
+        is_returning_provider: returningProviderIds.indexOf(p.provider_id) !== -1
+      };
+    });
+
+    return {
+      success: true,
+      providers: results
+    };
+
+  } catch (error) {
+    Logger.log('Error in getAllProvidersAvailability: ' + error.toString());
+    return {
+      success: false,
+      error: 'Error calculating provider availability: ' + error.message
+    };
+  }
+}
