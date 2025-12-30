@@ -150,13 +150,7 @@ function subtractBusinessExceptions(targetDate, windows) {
 
 /**
  * Subtracts existing appointments from available windows
- * @param {string} providerId - The provider ID
- * @param {Date} targetDate - The date
- * @param {Array<Object>} windows - Current available windows
- * @returns {Array<Object>} Updated windows
- */
-/**
- * Subtracts existing appointments from available windows
+ * Only active appointments block time slots; closed appointments do not
  * @param {string} providerId - The provider ID
  * @param {Date} targetDate - The date
  * @param {Array<Object>} windows - Available windows
@@ -166,11 +160,25 @@ function subtractBusinessExceptions(targetDate, windows) {
 function subtractExistingAppointments(providerId, targetDate, windows, excludeAppointmentId) {
   var appointments = getProviderAppointments(providerId, targetDate);
 
+  // Define active statuses that block time slots
+  var activeStatuses = ['Booked', 'Confirmed', 'Checked-in'];
+
+  // Closed statuses that do NOT block time slots:
+  // 'Rescheduled' - client isn't coming (new appointment created)
+  // 'Cancelled' - appointment was cancelled
+  // 'Completed' - already happened
+  // 'No-show' - client didn't show up
+
   for (var i = 0; i < appointments.length; i++) {
     var apt = appointments[i];
 
     // Skip the excluded appointment (for reschedule scenarios)
     if (excludeAppointmentId && apt.appointment_id === excludeAppointmentId) {
+      continue;
+    }
+
+    // Skip closed appointments - they don't block the calendar
+    if (activeStatuses.indexOf(apt.status) === -1) {
       continue;
     }
 

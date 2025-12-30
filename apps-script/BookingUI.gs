@@ -314,7 +314,8 @@ function getClientDetails(clientId) {
  * Search appointments by various criteria
  * @param {Object} searchParams - Search parameters
  * @param {string} [searchParams.query] - General search query (client name, appointment ID)
- * @param {string} [searchParams.date] - Specific date (YYYY-MM-DD)
+ * @param {string} [searchParams.startDate] - Start date for range (YYYY-MM-DD)
+ * @param {string} [searchParams.endDate] - End date for range (YYYY-MM-DD)
  * @param {string} [searchParams.providerId] - Provider ID
  * @param {string} [searchParams.status] - Appointment status
  * @returns {Array<Object>} Array of matching appointments with client/provider details
@@ -366,10 +367,19 @@ function searchAppointmentsForUI(searchParams) {
         }
       }
 
-      // Filter by date (normalize date to string for comparison)
-      if (searchParams.date) {
-        var aptDate = normalizeDate(apt.appointment_date);
-        if (aptDate !== searchParams.date) {
+      // Filter by date range
+      var aptDate = normalizeDate(apt.appointment_date);
+
+      // Filter by start date (from)
+      if (searchParams.startDate) {
+        if (aptDate < searchParams.startDate) {
+          return false;
+        }
+      }
+
+      // Filter by end date (to)
+      if (searchParams.endDate) {
+        if (aptDate > searchParams.endDate) {
           return false;
         }
       }
@@ -380,8 +390,24 @@ function searchAppointmentsForUI(searchParams) {
       }
 
       // Filter by status
-      if (searchParams.status && apt.status !== searchParams.status) {
-        return false;
+      if (searchParams.status) {
+        // Handle special status filter values
+        if (searchParams.status === 'ALL_OPEN') {
+          var openStatuses = ['Booked', 'Confirmed', 'Checked-in'];
+          if (openStatuses.indexOf(apt.status) === -1) {
+            return false;
+          }
+        } else if (searchParams.status === 'ALL_CLOSED') {
+          var closedStatuses = ['Rescheduled', 'Cancelled', 'Completed', 'No-show'];
+          if (closedStatuses.indexOf(apt.status) === -1) {
+            return false;
+          }
+        } else {
+          // Regular status filter
+          if (apt.status !== searchParams.status) {
+            return false;
+          }
+        }
       }
 
       return true;
@@ -528,14 +554,20 @@ function getAppointmentDetailsForUI(appointmentId) {
     var service = getService(appointment.service_id);
     Logger.log('getAppointmentDetailsForUI: Service found: ' + (service ? service.name : 'NULL'));
 
+    // Check if appointment is in the past
+    var today = normalizeDate(new Date());
+    var aptDate = normalizeDate(appointment.appointment_date);
+    var isPastAppointment = aptDate < today;
+    Logger.log('getAppointmentDetailsForUI: Is past appointment: ' + isPastAppointment + ' (apt=' + aptDate + ', today=' + today + ')');
+
     var result = {
       appointment: appointment,
       client: client,
       provider: provider,
       service: service,
       canCancel: canTransitionTo(appointment.status, 'Cancelled'),
-      canReschedule: canTransitionTo(appointment.status, 'Rescheduled'),
-      canCheckIn: canTransitionTo(appointment.status, 'Checked-in'),
+      canReschedule: !isPastAppointment && canTransitionTo(appointment.status, 'Rescheduled'),
+      canCheckIn: !isPastAppointment && canTransitionTo(appointment.status, 'Checked-in'),
       canMarkNoShow: canTransitionTo(appointment.status, 'No-show'),
       canComplete: canTransitionTo(appointment.status, 'Completed')
     };
@@ -548,4 +580,108 @@ function getAppointmentDetailsForUI(appointmentId) {
     Logger.log('ERROR stack: ' + error.stack);
     return null;
   }
+}
+
+/**
+ * Gets past appointments with open statuses that need review
+ * Returns appointments where date < today AND status is Booked, Confirmed, or Checked-in
+ * Note: Rescheduled is now a finalized status (creates new appointment, closes old one)
+ * @returns {Array<Object>} Array of past open appointments with details
+ */
+function getPastOpenAppointmentsForUI() {
+  try {
+    Logger.log('getPastOpenAppointmentsForUI: Starting...');
+
+    var today = normalizeDate(new Date());
+    Logger.log('getPastOpenAppointmentsForUI: Today is ' + today);
+
+    var appointments = getAppointments();
+    var clients = getClients();
+    var providers = getProviders();
+    var services = getServices();
+
+    // Create lookup maps
+    var clientMap = {};
+    clients.forEach(function(c) { clientMap[c.client_id] = c; });
+
+    var providerMap = {};
+    providers.forEach(function(p) { providerMap[p.provider_id] = p; });
+
+    var serviceMap = {};
+    services.forEach(function(s) { serviceMap[s.service_id] = s; });
+
+    // Define open statuses that need closure (Rescheduled is now finalized)
+    var openStatuses = ['Booked', 'Confirmed', 'Checked-in'];
+
+    // Filter appointments: past date AND open status
+    var results = appointments.filter(function(apt) {
+      var aptDate = normalizeDate(apt.appointment_date);
+
+      // Check if date is in the past (before today)
+      if (aptDate >= today) {
+        return false;
+      }
+
+      // Check if status is open (needs closure)
+      if (openStatuses.indexOf(apt.status) === -1) {
+        return false;
+      }
+
+      return true;
+    });
+
+    Logger.log('getPastOpenAppointmentsForUI: Found ' + results.length + ' past open appointments');
+
+    // Enhance results with related data
+    var enhancedResults = results.map(function(apt) {
+      var aptDate = normalizeDate(apt.appointment_date);
+
+      // Normalize start_time to string (HH:MM format)
+      var startTime = apt.start_time;
+      if (apt.start_time instanceof Date) {
+        var hours = apt.start_time.getHours();
+        var minutes = apt.start_time.getMinutes();
+        startTime = padZero(hours) + ':' + padZero(minutes);
+      }
+
+      return {
+        appointment_id: apt.appointment_id,
+        appointment_date: aptDate,
+        start_time: startTime,
+        duration: apt.duration,
+        status: apt.status,
+        notes: apt.notes || '',
+        client_id: apt.client_id,
+        provider_id: apt.provider_id,
+        service_id: apt.service_id,
+        client: clientMap[apt.client_id] || {},
+        provider: providerMap[apt.provider_id] || {},
+        service: serviceMap[apt.service_id] || {}
+      };
+    });
+
+    // Sort by date (oldest first) so user can work through them chronologically
+    enhancedResults.sort(function(a, b) {
+      if (a.appointment_date !== b.appointment_date) {
+        return a.appointment_date.localeCompare(b.appointment_date);
+      }
+      return a.start_time.localeCompare(b.start_time);
+    });
+
+    Logger.log('getPastOpenAppointmentsForUI: Returning ' + enhancedResults.length + ' enhanced results');
+    return enhancedResults;
+
+  } catch (error) {
+    Logger.log('ERROR in getPastOpenAppointmentsForUI: ' + error.toString());
+    Logger.log('ERROR stack: ' + error.stack);
+    return [];
+  }
+}
+
+/**
+ * Shows the appointment management sidebar for reviewing past open appointments
+ * This is called from the menu: Appointment System → Review Past Appointments
+ */
+function reviewPastAppointments() {
+  showAppointmentManagementSidebar();
 }

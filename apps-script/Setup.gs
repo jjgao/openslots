@@ -69,6 +69,7 @@ function onOpen() {
   // ========== STAFF FUNCTIONS (Everyone) ==========
   menu.addItem('Book Appointment', 'showBookingSidebar')
       .addItem('Manage Appointments', 'showAppointmentManagementSidebar')
+      .addItem('Review Past Appointments', 'reviewPastAppointments')
       .addItem('Manage Clients', 'showClientManagementSidebar');
 
   // ========== ADMIN FUNCTIONS ==========

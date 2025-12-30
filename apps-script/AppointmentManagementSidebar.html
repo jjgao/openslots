@@ -185,6 +185,11 @@
       color: #1a73e8;
     }
 
+    .status-confirmed {
+      background-color: #e6f4ea;
+      color: #137333;
+    }
+
     .status-checked-in {
       background-color: #fef7e0;
       color: #f9ab00;
@@ -348,7 +353,8 @@
   <div id="searchView">
     <div class="section">
       <label>Quick Access</label>
-      <button onclick="loadTodaysAppointments()" style="width: 100%;">View Today's Appointments</button>
+      <button onclick="loadTodaysAppointments()" style="width: 100%; margin-bottom: 8px;">View Today's Appointments</button>
+      <button onclick="loadPastOpenAppointments()" style="width: 100%;">Review Past Open Appointments</button>
     </div>
 
     <div class="section">
@@ -358,8 +364,13 @@
       </div>
 
       <div class="form-group">
-        <label>Date</label>
-        <input type="date" id="searchDate">
+        <label>Start Date (from)</label>
+        <input type="date" id="searchStartDate">
+      </div>
+
+      <div class="form-group">
+        <label>End Date (to)</label>
+        <input type="date" id="searchEndDate">
       </div>
 
       <div class="form-group">
@@ -373,7 +384,10 @@
         <label>Status</label>
         <select id="searchStatus">
           <option value="">All Statuses</option>
+          <option value="ALL_OPEN" selected>All Open (Booked, Confirmed, Checked-in)</option>
+          <option value="ALL_CLOSED">All Closed (Rescheduled, Cancelled, Completed, No-show)</option>
           <option value="Booked">Booked</option>
+          <option value="Confirmed">Confirmed</option>
           <option value="Checked-in">Checked-in</option>
           <option value="Completed">Completed</option>
           <option value="Cancelled">Cancelled</option>
@@ -475,7 +489,7 @@
 
   <script>
     // VERSION TRACKING - Increment this when making changes
-    var HTML_VERSION = 'v1.1.9';
+    var HTML_VERSION = 'v1.5.0';
 
     var currentAppointment = null;
     var allProviders = [];
@@ -490,7 +504,7 @@
       'Booked': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show', 'Confirmed'],
       'Confirmed': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show'],
       'Checked-in': ['Completed', 'No-show'],
-      'Rescheduled': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show', 'Confirmed'],
+      'Rescheduled': [],  // Finalized - original appointment replaced by new one
       'Cancelled': [],
       'Completed': [],
       'No-show': []
@@ -500,6 +514,11 @@
     function canTransitionTo(currentStatus, newStatus) {
       var allowedTransitions = VALID_STATUS_TRANSITIONS[currentStatus];
       return allowedTransitions && allowedTransitions.indexOf(newStatus) !== -1;
+    }
+
+    // Helper function to pad single digit numbers with leading zero
+    function padZero(num) {
+      return num < 10 ? '0' + num : '' + num;
     }
 
     // Helper function to calculate end time from start time and duration
@@ -518,7 +537,7 @@
       hours = hours % 24;
 
       // Format as HH:MM
-      return (hours < 10 ? '0' : '') + hours + ':' + (minutes < 10 ? '0' : '') + minutes;
+      return padZero(hours) + ':' + padZero(minutes);
     }
 
     // Custom confirmation modal functions
@@ -594,7 +613,18 @@
     // Initialize
     window.onload = function() {
       loadProviders();
+      setDefaultSearchDates();
     };
+
+    function setDefaultSearchDates() {
+      // Set start date to today by default
+      var today = new Date();
+      var todayStr = today.getFullYear() + '-' +
+                     padZero(today.getMonth() + 1) + '-' +
+                     padZero(today.getDate());
+      document.getElementById('searchStartDate').value = todayStr;
+      // End date is left empty (no upper limit)
+    }
 
     function loadProviders() {
       google.script.run
@@ -620,7 +650,8 @@
     function searchAppointments() {
       var searchParams = {
         query: document.getElementById('searchQuery').value,
-        date: document.getElementById('searchDate').value,
+        startDate: document.getElementById('searchStartDate').value,
+        endDate: document.getElementById('searchEndDate').value,
         providerId: document.getElementById('searchProvider').value,
         status: document.getElementById('searchStatus').value
       };
@@ -648,6 +679,19 @@
           document.getElementById('resultsContainer').innerHTML = '';
         })
         .getTodaysAppointmentsForUI();
+    }
+
+    function loadPastOpenAppointments() {
+      document.getElementById('resultsContainer').innerHTML = '<div class="loading">Loading past open appointments...</div>';
+      document.getElementById('searchError').textContent = '';
+
+      google.script.run
+        .withSuccessHandler(displayResults)
+        .withFailureHandler(function(error) {
+          document.getElementById('searchError').textContent = 'Error: ' + error.message;
+          document.getElementById('resultsContainer').innerHTML = '';
+        })
+        .getPastOpenAppointmentsForUI();
     }
 
     function displayResults(appointments) {
@@ -694,6 +738,14 @@
       if (cachedAppointments[appointmentId]) {
         var apt = cachedAppointments[appointmentId];
 
+        // Check if appointment is in the past
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        var todayStr = today.getFullYear() + '-' +
+                       padZero(today.getMonth() + 1) + '-' +
+                       padZero(today.getDate());
+        var isPastAppointment = apt.appointment_date < todayStr;
+
         // Transform cached data to match expected structure
         var details = {
           appointment: {
@@ -711,8 +763,8 @@
           provider: apt.provider,
           service: apt.service,
           canCancel: canTransitionTo(apt.status, 'Cancelled'),
-          canReschedule: canTransitionTo(apt.status, 'Rescheduled'),
-          canCheckIn: canTransitionTo(apt.status, 'Checked-in'),
+          canReschedule: !isPastAppointment && canTransitionTo(apt.status, 'Rescheduled'),
+          canCheckIn: !isPastAppointment && canTransitionTo(apt.status, 'Checked-in'),
           canMarkNoShow: canTransitionTo(apt.status, 'No-show'),
           canComplete: canTransitionTo(apt.status, 'Completed')
         };
@@ -1107,7 +1159,11 @@
       google.script.run
         .withSuccessHandler(function(result) {
           if (result && result.success) {
-            alert('Appointment rescheduled successfully!');
+            var message = 'Appointment rescheduled successfully!\n\n';
+            message += 'Original appointment: ' + result.data.original_appointment_id + ' (marked as Rescheduled)\n';
+            message += 'New appointment: ' + result.data.new_appointment_id + '\n';
+            message += 'New time: ' + result.data.new_details.date + ' at ' + result.data.new_details.start_time;
+            alert(message);
             showSearchView();
             searchAppointments(); // Refresh the search results
           } else {
@@ -1128,11 +1184,11 @@
 
     function clearSearch() {
       document.getElementById('searchQuery').value = '';
-      document.getElementById('searchDate').value = '';
       document.getElementById('searchProvider').value = '';
-      document.getElementById('searchStatus').value = '';
+      document.getElementById('searchStatus').value = 'ALL_OPEN'; // Reset to default "All Open"
       document.getElementById('resultsContainer').innerHTML = '';
       document.getElementById('searchError').textContent = '';
+      setDefaultSearchDates(); // Reset dates to default (today onwards)
     }
 
     function showSearchView() {

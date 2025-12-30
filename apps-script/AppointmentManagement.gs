@@ -18,7 +18,7 @@ var VALID_STATUS_TRANSITIONS = {
   'Booked': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show', 'Confirmed'],
   'Confirmed': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show'],
   'Checked-in': ['Completed', 'No-show'],
-  'Rescheduled': ['Cancelled', 'Rescheduled', 'Checked-in', 'No-show', 'Confirmed'],
+  'Rescheduled': [],  // Finalized - original appointment replaced by new one
   'Cancelled': [],  // Finalized - no further changes
   'Completed': [],  // Finalized
   'No-show': []     // Finalized
@@ -103,8 +103,9 @@ function cancelAppointment(appointmentId, reason, cancelledBy) {
 }
 
 /**
- * Reschedules an appointment to a new date/time/provider
- * @param {string} appointmentId - The appointment ID
+ * Reschedules an appointment by creating a new one and marking the old one as Rescheduled
+ * This maintains complete audit trail by keeping both appointments
+ * @param {string} appointmentId - The original appointment ID
  * @param {Object} options - Reschedule options
  * @param {string} [options.newDate] - New date (YYYY-MM-DD)
  * @param {string} [options.newStartTime] - New start time (HH:MM)
@@ -112,7 +113,7 @@ function cancelAppointment(appointmentId, reason, cancelledBy) {
  * @param {string} [options.newServiceId] - New service ID
  * @param {number} [options.newDuration] - New duration in minutes
  * @param {string} [options.reason] - Reason for rescheduling
- * @returns {Object} Result object
+ * @returns {Object} Result object with new appointment ID
  */
 function rescheduleAppointment(appointmentId, options) {
   try {
@@ -125,159 +126,160 @@ function rescheduleAppointment(appointmentId, options) {
       return { success: false, message: 'At least one change (date, time, or provider) is required' };
     }
 
-    // Get appointment
-    var appointment = getAppointmentById(appointmentId);
-    if (!appointment) {
-      return { success: false, message: `Appointment ${appointmentId} not found` };
+    // Get original appointment
+    var originalApt = getAppointmentById(appointmentId);
+    if (!originalApt) {
+      return { success: false, message: 'Appointment ' + appointmentId + ' not found' };
     }
 
     // Check if rescheduling is allowed
-    var currentStatus = appointment.status;
+    var currentStatus = originalApt.status;
     if (!canTransitionTo(currentStatus, 'Rescheduled')) {
       return {
         success: false,
-        message: `Cannot reschedule appointment with status "${currentStatus}"`
+        message: 'Cannot reschedule appointment with status "' + currentStatus + '"'
       };
     }
 
-    // Prepare update data
-    var updates = {
-      status: 'Rescheduled'
-    };
+    // Prepare new appointment data (inherit from original, override with new values)
+    var newDate = options.newDate || originalApt.appointment_date;
+    var newStartTime = options.newStartTime || originalApt.start_time;
+    var newProviderId = options.newProviderId || originalApt.provider_id;
+    var newServiceId = options.newServiceId || originalApt.service_id;
+    var newDuration = options.newDuration || originalApt.duration;
 
-    // Build before/after for logging
-    var before = {
-      date: appointment.appointment_date,
-      start_time: appointment.start_time,
-      provider_id: appointment.provider_id,
-      service_id: appointment.service_id,
-      duration: appointment.duration
-    };
-
-    // ES5-compatible object copy
-    var after = {
-      date: before.date,
-      start_time: before.start_time,
-      provider_id: before.provider_id,
-      service_id: before.service_id,
-      duration: before.duration
-    };
-
-    // Apply changes
-    if (options.newDate) {
-      updates.appointment_date = options.newDate;
-      after.date = options.newDate;
-    }
-
-    if (options.newStartTime) {
-      updates.start_time = options.newStartTime;
-      after.start_time = options.newStartTime;
-    }
-
+    // Validate new provider and service
     if (options.newProviderId) {
-      // Validate provider exists and offers the service
       var provider = getProvider(options.newProviderId);
       if (!provider) {
-        return { success: false, message: `Provider ${options.newProviderId} not found` };
+        return { success: false, message: 'Provider ' + options.newProviderId + ' not found' };
       }
 
-      var serviceId = options.newServiceId || appointment.service_id;
-      if (!providerOffersService(options.newProviderId, serviceId)) {
+      if (!providerOffersService(options.newProviderId, newServiceId)) {
         return { success: false, message: 'Provider does not offer this service' };
       }
-
-      updates.provider_id = options.newProviderId;
-      after.provider_id = options.newProviderId;
     }
 
     if (options.newServiceId) {
       var service = getService(options.newServiceId);
       if (!service) {
-        return { success: false, message: `Service ${options.newServiceId} not found` };
-      }
-
-      updates.service_id = options.newServiceId;
-      after.service_id = options.newServiceId;
-    }
-
-    if (options.newDuration) {
-      updates.duration = options.newDuration;
-      after.duration = options.newDuration;
-    }
-
-    // Calculate and update end_time if start_time or duration changed
-    if (options.newStartTime || options.newDuration) {
-      var finalStartTime = options.newStartTime || appointment.start_time;
-      var finalDuration = options.newDuration || appointment.duration;
-      var newEndTime = calculateEndTime(finalStartTime, finalDuration);
-      updates.end_time = newEndTime;
-    }
-
-    // Check availability of new slot if time/date/provider changed
-    if (options.newDate || options.newStartTime || options.newProviderId) {
-      var checkDate = options.newDate || appointment.appointment_date;
-      var checkTime = options.newStartTime || appointment.start_time;
-      var checkProvider = options.newProviderId || appointment.provider_id;
-      var checkDuration = options.newDuration || appointment.duration;
-
-      var available = isSlotAvailable(
-        checkProvider,
-        checkDate,
-        checkTime,
-        checkDuration,
-        appointmentId // Exclude this appointment from conflict check
-      );
-
-      if (!available) {
-        return {
-          success: false,
-          message: 'The new time slot is not available'
-        };
+        return { success: false, message: 'Service ' + options.newServiceId + ' not found' };
       }
     }
 
-    // Update appointment record
-    var updated = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, updates);
-    if (!updated) {
-      return { success: false, message: 'Failed to update appointment' };
+    // Check availability of new slot
+    var available = isSlotAvailable(
+      newProviderId,
+      newDate,
+      newStartTime,
+      newDuration,
+      null // Don't exclude any appointment since we're creating a new one
+    );
+
+    if (!available) {
+      return {
+        success: false,
+        message: 'The new time slot is not available'
+      };
     }
 
-    // Update calendar event
-    if (appointment.calendar_event_id) {
-      var calendarResult = updateCalendarEvent(appointmentId);
+    // Calculate end time for new appointment
+    var newEndTime = calculateEndTime(newStartTime, newDuration);
 
-      if (calendarResult.success) {
-        logCalendarUpdate(appointmentId, appointment.calendar_event_id, 'Event updated due to rescheduling');
+    // Create new appointment
+    var newAppointmentData = {
+      clientId: originalApt.client_id,
+      providerId: newProviderId,
+      serviceId: newServiceId,
+      date: newDate,
+      startTime: newStartTime,
+      duration: newDuration,
+      notes: (originalApt.notes ? originalApt.notes + ' | ' : '') +
+             'Rescheduled from ' + appointmentId + ' (' + originalApt.appointment_date + ' at ' + originalApt.start_time + ')'
+    };
+
+    var newAppointmentResult = bookAppointment(newAppointmentData);
+
+    if (!newAppointmentResult.success) {
+      return {
+        success: false,
+        message: 'Failed to create new appointment: ' + newAppointmentResult.message
+      };
+    }
+
+    var newAppointmentId = newAppointmentResult.appointmentId;
+
+    // Mark original appointment as Rescheduled and add reference to new appointment
+    var originalUpdates = {
+      status: 'Rescheduled',
+      notes: (originalApt.notes ? originalApt.notes + ' | ' : '') +
+             'Rescheduled to ' + newAppointmentId + ' (' + newDate + ' at ' + newStartTime + ')'
+    };
+
+    var updatedOriginal = updateRecordById(SHEETS.APPOINTMENTS, appointmentId, originalUpdates);
+    if (!updatedOriginal) {
+      // Rollback: try to delete the new appointment
+      Logger.log('WARNING: Failed to mark original appointment as Rescheduled. New appointment ' + newAppointmentId + ' may need manual cleanup.');
+    }
+
+    // Cancel original calendar event if it exists
+    if (originalApt.calendar_event_id) {
+      var cancelResult = deleteCalendarEvent(originalApt.calendar_event_id);
+      if (cancelResult.success) {
+        logCalendarUpdate(appointmentId, originalApt.calendar_event_id, 'Event cancelled due to rescheduling');
       }
     }
 
-    // Log the reschedule
+    // Log the reschedule activity
     logActivity({
       actionType: ACTION_TYPES.RESCHEDULE,
       appointmentId: appointmentId,
-      clientId: appointment.client_id,
-      providerId: appointment.provider_id,
-      previousValue: JSON.stringify(before),
-      newValue: JSON.stringify(after),
-      notes: options.reason || 'Appointment rescheduled'
+      clientId: originalApt.client_id,
+      providerId: originalApt.provider_id,
+      previousValue: JSON.stringify({
+        appointment_id: appointmentId,
+        date: originalApt.appointment_date,
+        start_time: originalApt.start_time,
+        provider_id: originalApt.provider_id,
+        service_id: originalApt.service_id,
+        duration: originalApt.duration
+      }),
+      newValue: JSON.stringify({
+        appointment_id: newAppointmentId,
+        date: newDate,
+        start_time: newStartTime,
+        provider_id: newProviderId,
+        service_id: newServiceId,
+        duration: newDuration
+      }),
+      notes: (options.reason || 'Appointment rescheduled') + ' - New appointment: ' + newAppointmentId
     });
 
     return {
       success: true,
       message: 'Appointment rescheduled successfully',
       data: {
-        appointment_id: appointmentId,
-        before: before,
-        after: after,
+        original_appointment_id: appointmentId,
+        new_appointment_id: newAppointmentId,
+        original_details: {
+          date: originalApt.appointment_date,
+          start_time: originalApt.start_time,
+          provider_id: originalApt.provider_id
+        },
+        new_details: {
+          date: newDate,
+          start_time: newStartTime,
+          provider_id: newProviderId
+        },
         reason: options.reason
       }
     };
 
   } catch (error) {
-    Logger.log(`Error rescheduling appointment: ${error.toString()}`);
+    Logger.log('Error rescheduling appointment: ' + error.toString());
     return {
       success: false,
-      message: `Error rescheduling appointment: ${error.message}`
+      message: 'Error rescheduling appointment: ' + error.message
     };
   }
 }
