@@ -664,13 +664,18 @@
      * Triggered when service, duration, or date changes
      */
     function updateProviderAvailability() {
-      var clientId = selectedClient ? selectedClient.client_id : null;
+      console.log('updateProviderAvailability() called');
+
+      var clientId = selectedClientId || null;
       var serviceId = document.getElementById('service').value;
       var duration = document.getElementById('duration').value;
       var date = document.getElementById('appointmentDate').value;
 
+      console.log('Values:', { clientId: clientId, serviceId: serviceId, duration: duration, date: date });
+
       // Need date and duration to calculate availability
       if (!date || !duration) {
+        console.log('Missing date or duration, resetting dropdown');
         resetProviderDropdown();
         return;
       }
@@ -678,9 +683,12 @@
       var providerSelect = document.getElementById('provider');
       var currentSelection = providerSelect.value;
 
+      console.log('Calling backend getAllProvidersAvailability...');
+
       // Call backend to get availability for all providers
       google.script.run
         .withSuccessHandler(function(result) {
+          console.log('Backend response:', result);
           if (result.success) {
             updateProviderDropdownOptions(result.providers, currentSelection);
           } else {
@@ -699,6 +707,8 @@
      * @param {string} currentSelection - The currently selected provider ID
      */
     function updateProviderDropdownOptions(providers, currentSelection) {
+      console.log('updateProviderDropdownOptions() called with', providers.length, 'providers');
+
       var select = document.getElementById('provider');
 
       // Update each option (skip index 0 which is the placeholder "Select provider...")
@@ -712,15 +722,20 @@
         });
 
         if (providerData) {
+          console.log('Updating provider:', providerData.name, 'slots:', providerData.slot_count, 'returning:', providerData.is_returning_provider);
+
           option.dataset.slotCount = providerData.slot_count.toString();
           option.dataset.isReturning = providerData.is_returning_provider.toString();
 
           var providerName = option.dataset.providerName;
-          option.textContent = formatProviderOption(
+          var formattedText = formatProviderOption(
             providerName,
             providerData.slot_count,
             providerData.is_returning_provider
           );
+
+          console.log('Formatted text:', formattedText);
+          option.textContent = formattedText;
         }
       }
 
@@ -728,6 +743,8 @@
       if (currentSelection) {
         select.value = currentSelection;
       }
+
+      console.log('Provider dropdown updated successfully');
     }
 
     /**
@@ -759,7 +776,21 @@
      * Handler for provider selection change
      */
     function onProviderChange() {
-      checkAvailability(); // Existing behavior - fetch time slots
+      var providerSelect = document.getElementById('provider');
+      var selectedOption = providerSelect.options[providerSelect.selectedIndex];
+
+      // Check if provider has 0 slots (already checked by getAllProvidersAvailability)
+      if (selectedOption && selectedOption.dataset.slotCount === '0') {
+        // Provider has no slots - show message without calling backend
+        document.getElementById('timeSlots').innerHTML = '<div class="client-info">No available time slots for this provider</div>';
+        document.getElementById('timeSlotsGroup').classList.remove('hidden');
+        selectedTimeSlot = null;
+        checkCanBook();
+        return;
+      }
+
+      // Provider has slots (or unknown) - fetch time slots from backend
+      checkAvailability();
     }
 
     /**
