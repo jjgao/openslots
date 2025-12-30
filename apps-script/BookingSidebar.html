@@ -257,6 +257,7 @@
     var selectedClientId = null;
     var selectedTimeSlot = null;
     var formData = null;
+    var cachedProviderSlots = {};  // Cache time slots by provider_id
 
     // Load form data on page load
     google.script.run
@@ -729,6 +730,7 @@
 
     /**
      * Updates provider dropdown options with availability counts and returning indicators
+     * Also caches time slots for instant display later
      * @param {Array} providers - Array of provider data from backend
      * @param {string} currentSelection - The currently selected provider ID
      */
@@ -736,6 +738,13 @@
       console.log('updateProviderDropdownOptions() called with', providers.length, 'providers');
 
       var select = document.getElementById('provider');
+
+      // Clear cached slots and rebuild cache with new data
+      cachedProviderSlots = {};
+      providers.forEach(function(p) {
+        cachedProviderSlots[p.provider_id] = p.time_slots || [];
+      });
+      console.log('Cached time slots for', Object.keys(cachedProviderSlots).length, 'providers');
 
       // Update each option (skip index 0 which is the placeholder "Select provider...")
       for (var i = 1; i < select.options.length; i++) {
@@ -780,6 +789,9 @@
       var select = document.getElementById('provider');
       var currentSelection = select.value;
 
+      // Clear cached slots
+      cachedProviderSlots = {};
+
       // Reset each option to show name only
       for (var i = 1; i < select.options.length; i++) {
         var option = select.options[i];
@@ -800,23 +812,35 @@
 
     /**
      * Handler for provider selection change
+     * Displays cached time slots immediately (no backend call needed)
      */
     function onProviderChange() {
       var providerSelect = document.getElementById('provider');
-      var selectedOption = providerSelect.options[providerSelect.selectedIndex];
+      var providerId = providerSelect.value;
 
-      // Check if provider has 0 slots (already checked by getAllProvidersAvailability)
-      if (selectedOption && selectedOption.dataset.slotCount === '0') {
-        // Provider has no slots - show message without calling backend
-        document.getElementById('timeSlots').innerHTML = '<div class="client-info">No available time slots for this provider</div>';
-        document.getElementById('timeSlotsGroup').classList.remove('hidden');
+      if (!providerId) {
+        document.getElementById('timeSlotsGroup').classList.add('hidden');
         selectedTimeSlot = null;
         checkCanBook();
         return;
       }
 
-      // Provider has slots (or unknown) - fetch time slots from backend
-      checkAvailability();
+      // Check cache for time slots (should always be available after updateProviderAvailability)
+      var slots = cachedProviderSlots[providerId];
+
+      if (slots === undefined) {
+        // Cache miss - shouldn't happen in normal flow, but fallback to backend
+        console.warn('Cache miss for provider ' + providerId + ', calling backend');
+        checkAvailability();
+        return;
+      }
+
+      // Display cached slots immediately (no backend call!)
+      console.log('Displaying cached slots for provider ' + providerId + ': ' + slots.length + ' slots');
+      displayTimeSlots(slots);
+      document.getElementById('timeSlotsGroup').classList.remove('hidden');
+      selectedTimeSlot = null;
+      checkCanBook();
     }
 
     /**

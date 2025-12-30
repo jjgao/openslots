@@ -820,6 +820,7 @@ function getAllProvidersAvailability(serviceId, dateStr, duration, clientId) {
           provider_id: p.provider_id,
           name: p.name,
           slot_count: 0,
+          time_slots: [],
           is_available: false,
           is_returning_provider: returningProviderIds.indexOf(p.provider_id) !== -1
         };
@@ -833,18 +834,20 @@ function getAllProvidersAvailability(serviceId, dateStr, duration, clientId) {
           provider_id: p.provider_id,
           name: p.name,
           slot_count: 0,
+          time_slots: [],
           is_available: false,
           is_returning_provider: returningProviderIds.indexOf(p.provider_id) !== -1
         };
       }
 
-      // Generate slots and count them
+      // Generate slots - return the actual slots, not just the count
       var slots = generateTimeSlots(timeBlocks, [], durationNum, date);
 
       return {
         provider_id: p.provider_id,
         name: p.name,
         slot_count: slots.length,
+        time_slots: slots,  // Return actual time slots for caching
         is_available: slots.length > 0,
         is_returning_provider: returningProviderIds.indexOf(p.provider_id) !== -1
       };
