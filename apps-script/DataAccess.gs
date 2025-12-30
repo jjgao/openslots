@@ -424,18 +424,67 @@ function getAppointmentById(appointmentId) {
 }
 
 /**
- * Gets appointments for a specific date
+ * Gets appointments for a specific date (OPTIMIZED)
+ * Only loads matching rows instead of entire sheet for better performance
  * @param {Date|string} date - The date to filter by
  * @returns {Array<Object>} Array of appointment objects
  */
 function getAppointmentsByDate(date) {
-  var appointments = getAppointments();
   var targetDate = normalizeDate(date);
+  var sheet = getSheet(SHEETS.APPOINTMENTS);
 
-  return appointments.filter(apt => {
-    var aptDate = normalizeDate(apt.appointment_date);
-    return aptDate === targetDate;
-  });
+  if (!sheet) {
+    Logger.log('Appointments sheet not found');
+    return [];
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) {
+    return []; // Only header row
+  }
+
+  // Step 1: Read headers to find date column index
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var dateColIndex = headers.indexOf('appointment_date') + 1; // 1-indexed
+
+  if (dateColIndex === 0) {
+    Logger.log('appointment_date column not found in Appointments sheet');
+    return [];
+  }
+
+  // Step 2: Read ONLY the date column (much faster than reading all columns)
+  var dateColumn = sheet.getRange(2, dateColIndex, lastRow - 1, 1).getValues();
+
+  // Step 3: Find matching row numbers
+  var matchingRows = [];
+  for (var i = 0; i < dateColumn.length; i++) {
+    var cellDate = normalizeDate(dateColumn[i][0]);
+    if (cellDate === targetDate) {
+      matchingRows.push(i + 2); // +2 because array is 0-indexed and sheet starts at row 2
+    }
+  }
+
+  if (matchingRows.length === 0) {
+    return [];
+  }
+
+  // Step 4: Read only the matching rows (not the entire sheet!)
+  var results = [];
+  var numCols = headers.length;
+
+  for (var i = 0; i < matchingRows.length; i++) {
+    var rowNum = matchingRows[i];
+    var rowData = sheet.getRange(rowNum, 1, 1, numCols).getValues()[0];
+
+    var apt = {};
+    for (var j = 0; j < headers.length; j++) {
+      apt[headers[j]] = rowData[j];
+    }
+    results.push(apt);
+  }
+
+  Logger.log('getAppointmentsByDate: Found ' + results.length + ' appointments for ' + targetDate + ' (optimized: read ' + matchingRows.length + ' rows instead of ' + (lastRow - 1) + ')');
+  return results;
 }
 
 /**

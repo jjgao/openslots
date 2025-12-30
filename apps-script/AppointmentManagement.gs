@@ -82,6 +82,9 @@ function cancelAppointment(appointmentId, reason, cancelledBy) {
       reason
     );
 
+    // Clear availability cache for this date
+    clearAvailabilityCache(appointment.appointment_date);
+
     return {
       success: true,
       message: 'Appointment cancelled successfully',
@@ -254,6 +257,9 @@ function rescheduleAppointment(appointmentId, options) {
       }),
       notes: (options.reason || 'Appointment rescheduled') + ' - New appointment: ' + newAppointmentId
     });
+
+    // Clear availability cache for original date (new date is cleared by bookAppointment)
+    clearAvailabilityCache(originalApt.appointment_date);
 
     return {
       success: true,
@@ -465,6 +471,9 @@ function markNoShow(appointmentId, markedBy, notes) {
       notes || 'Client did not show up for appointment'
     );
 
+    // Clear availability cache for this date (No-show status frees up the time slot)
+    clearAvailabilityCache(appointment.appointment_date);
+
     return {
       success: true,
       message: 'Appointment marked as no-show',
@@ -536,6 +545,9 @@ function completeAppointment(appointmentId, completedBy, notes) {
       newValue: 'Completed',
       notes: notes || 'Appointment completed successfully'
     });
+
+    // Clear availability cache for this date (Completed status frees up the time slot)
+    clearAvailabilityCache(appointment.appointment_date);
 
     return {
       success: true,

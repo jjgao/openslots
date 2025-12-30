@@ -139,8 +139,8 @@ function generateTimeSlots(timeBlocks, existingAppointments, duration, date) {
   for (var i = 0; i < timeBlocks.length; i++) {
     var block = timeBlocks[i];
     // Note: block.start and block.end are already in minutes (from getProviderAvailability)
-    var startMinutes = typeof block.start === 'number' ? block.start : timeToMinutes(block.start);
-    var endMinutes = typeof block.end === 'number' ? block.end : timeToMinutes(block.end);
+    var startMinutes = typeof block.start === 'number' ? block.start : parseTimeToMinutes(block.start);
+    var endMinutes = typeof block.end === 'number' ? block.end : parseTimeToMinutes(block.end);
 
     // Generate slots within this time block
     for (var minutes = startMinutes; minutes + duration <= endMinutes; minutes += slotInterval) {
@@ -149,7 +149,7 @@ function generateTimeSlots(timeBlocks, existingAppointments, duration, date) {
         continue;
       }
 
-      var slotTime = minutesToTime(minutes);
+      var slotTime = minutesToTimeString(minutes);
 
       // Check if this slot conflicts with existing appointments
       if (!hasConflict(slotTime, duration, existingAppointments)) {
@@ -161,35 +161,8 @@ function generateTimeSlots(timeBlocks, existingAppointments, duration, date) {
   return slots;
 }
 
-/**
- * Converts time string to minutes since midnight
- * @param {string} timeStr - Time in HH:MM format
- * @returns {number} Minutes since midnight
- */
-function timeToMinutes(timeStr) {
-  var parts = timeStr.split(':');
-  return parseInt(parts[0]) * 60 + parseInt(parts[1]);
-}
-
-/**
- * Converts minutes since midnight to time string
- * @param {number} minutes - Minutes since midnight
- * @returns {string} Time in HH:MM format
- */
-function minutesToTime(minutes) {
-  var hours = Math.floor(minutes / 60);
-  var mins = minutes % 60;
-  return padZero(hours) + ':' + padZero(mins);
-}
-
-/**
- * Pads single digit with leading zero
- * @param {number} num - Number to pad
- * @returns {string} Padded string
- */
-function padZero(num) {
-  return num < 10 ? '0' + num : '' + num;
-}
+// Note: Time conversion utilities have been moved to Utils.gs
+// Use parseTimeToMinutes(), minutesToTimeString(), and padZero() from Utils.gs
 
 /**
  * Checks if a time slot conflicts with existing appointments
@@ -199,7 +172,7 @@ function padZero(num) {
  * @returns {boolean} True if there's a conflict
  */
 function hasConflict(slotTime, duration, appointments) {
-  var slotStart = timeToMinutes(slotTime);
+  var slotStart = parseTimeToMinutes(slotTime);
   var slotEnd = slotStart + duration;
 
   for (var i = 0; i < appointments.length; i++) {
@@ -210,8 +183,8 @@ function hasConflict(slotTime, duration, appointments) {
       continue;
     }
 
-    var aptStart = timeToMinutes(apt.start_time);
-    var aptEnd = timeToMinutes(apt.end_time);
+    var aptStart = parseTimeToMinutes(apt.start_time);
+    var aptEnd = parseTimeToMinutes(apt.end_time);
 
     // Check for overlap
     if (slotStart < aptEnd && slotEnd > aptStart) {
@@ -252,8 +225,8 @@ function bookAppointmentFromUI(bookingData) {
     var duration = parseInt(bookingData.duration);
 
     // Calculate end time
-    var startMinutes = timeToMinutes(bookingData.startTime);
-    var endTime = minutesToTime(startMinutes + duration);
+    var startMinutes = parseTimeToMinutes(bookingData.startTime);
+    var endTime = minutesToTimeString(startMinutes + duration);
 
     // Create appointment data
     var appointmentData = {
@@ -691,13 +664,13 @@ function reviewPastAppointments() {
 // ============================================================================
 
 /**
- * Gets list of providers who have previously served this client for this service
+ * Gets list of providers who have previously served this client
  * Used to show "★ Returning" indicators in the booking UI dropdown
+ * Returns providers who completed or checked-in ANY service with this client
  * @param {string} clientId - The client ID
- * @param {string} serviceId - Optional service ID to filter by
  * @returns {Array<string>} Array of provider IDs who have served this client
  */
-function getReturningProviders(clientId, serviceId) {
+function getReturningProviders(clientId) {
   try {
     if (!clientId) {
       return [];
@@ -714,16 +687,7 @@ function getReturningProviders(clientId, serviceId) {
     var completedStatuses = ['Completed', 'Checked-in'];
     var serviceRendered = appointments.filter(function(apt) {
       // Must be completed or checked-in (actual service provided)
-      if (completedStatuses.indexOf(apt.status) === -1) {
-        return false;
-      }
-
-      // If serviceId provided, must match
-      if (serviceId && apt.service_id !== serviceId) {
-        return false;
-      }
-
-      return true;
+      return completedStatuses.indexOf(apt.status) !== -1;
     });
 
     // Extract unique provider IDs
@@ -769,6 +733,8 @@ function filterProvidersByService(providers, serviceId) {
 
 /**
  * Gets availability summary for all active providers
+ * OPTIMIZED: Batch-loads all data upfront to reduce sheet reads from ~20 to 5
+ * CACHED: Uses CacheService to cache results for 5 minutes for instant repeated queries
  * Used by booking UI to show slot counts and returning provider indicators in provider dropdown
  * @param {string} serviceId - Optional service ID to filter providers
  * @param {string} dateStr - Optional date in YYYY-MM-DD format
@@ -783,13 +749,13 @@ function getAllProvidersAvailability(serviceId, dateStr, duration, clientId) {
     Logger.log('getAllProvidersAvailability: Found ' + providers.length + ' active providers');
     Logger.log('getAllProvidersAvailability: serviceId=' + serviceId + ', dateStr=' + dateStr + ', duration=' + duration + ', clientId=' + clientId);
 
-    // Get returning providers if client and service specified
+    // Get returning providers if client specified (regardless of service)
     var returningProviderIds = [];
-    if (clientId && serviceId) {
-      returningProviderIds = getReturningProviders(clientId, serviceId);
+    if (clientId) {
+      returningProviderIds = getReturningProviders(clientId);
     }
 
-    // If date or duration not provided, return placeholder state
+    // If date or duration not provided, return placeholder state (don't cache this)
     if (!dateStr || !duration) {
       return {
         success: true,
@@ -808,10 +774,68 @@ function getAllProvidersAvailability(serviceId, dateStr, duration, clientId) {
       };
     }
 
-    // Calculate actual availability for each provider
+    // CACHING: Check cache first (cache key doesn't include clientId since that only affects returning flags)
+    var cacheKey = 'avail_' + dateStr + '_' + duration + (serviceId ? '_' + serviceId : '');
+    var cache = CacheService.getScriptCache();
+    var cachedResult = cache.get(cacheKey);
+
+    if (cachedResult) {
+      Logger.log('Cache HIT for ' + cacheKey + ' - returning cached availability');
+      var result = JSON.parse(cachedResult);
+
+      // Add returning provider flags (not cached since they vary by client)
+      result.providers = result.providers.map(function(p) {
+        p.is_returning_provider = returningProviderIds.indexOf(p.provider_id) !== -1;
+        return p;
+      });
+
+      return result;
+    }
+
+    Logger.log('Cache MISS for ' + cacheKey + ' - calculating availability');
+
+    // OPTIMIZATION: Pre-load all data ONCE instead of reading sheets for each provider
     var date = parseDateInTimezone(dateStr);
     var durationNum = parseInt(duration);
+    var targetDate = normalizeDate(date);
+    var dayName = getDayName(date);
 
+    Logger.log('Pre-loading all sheet data for date: ' + targetDate);
+    var cachedData = {
+      // Read each sheet only once
+      businessHolidays: getSheetData(SHEETS.BUSINESS_HOLIDAYS),
+      providerAvailability: getSheetData(SHEETS.PROVIDER_AVAILABILITY),
+      providerExceptions: getSheetData(SHEETS.PROVIDER_EXCEPTIONS),
+      businessExceptions: getSheetData(SHEETS.BUSINESS_EXCEPTIONS),
+      appointments: getAppointmentsByDate(dateStr)  // OPTIMIZED: Only load appointments for target date
+    };
+    Logger.log('Pre-loaded data: ' +
+               cachedData.businessHolidays.length + ' holidays, ' +
+               cachedData.providerAvailability.length + ' availability records, ' +
+               cachedData.providerExceptions.length + ' provider exceptions, ' +
+               cachedData.businessExceptions.length + ' business exceptions, ' +
+               cachedData.appointments.length + ' appointments (for ' + targetDate + ')');
+
+    // Check business holiday once for all providers
+    var isHoliday = isBusinessHolidayFromCache(date, cachedData.businessHolidays);
+    if (isHoliday) {
+      Logger.log('Date ' + targetDate + ' is a business holiday - all providers unavailable');
+      return {
+        success: true,
+        providers: providers.map(function(p) {
+          return {
+            provider_id: p.provider_id,
+            name: p.name,
+            slot_count: 0,
+            time_slots: [],
+            is_available: false,
+            is_returning_provider: returningProviderIds.indexOf(p.provider_id) !== -1
+          };
+        })
+      };
+    }
+
+    // Calculate actual availability for each provider using cached data
     var results = providers.map(function(p) {
       // Check if provider offers the service
       if (serviceId && !providerOffersServiceCheck(p, serviceId)) {
@@ -826,8 +850,8 @@ function getAllProvidersAvailability(serviceId, dateStr, duration, clientId) {
         };
       }
 
-      // Get available time windows
-      var timeBlocks = getProviderAvailability(p.provider_id, date);
+      // Get available time windows using cached data (no sheet reads!)
+      var timeBlocks = getProviderAvailabilityFromCache(p.provider_id, date, dayName, targetDate, cachedData);
 
       if (timeBlocks.length === 0) {
         return {
@@ -849,14 +873,32 @@ function getAllProvidersAvailability(serviceId, dateStr, duration, clientId) {
         slot_count: slots.length,
         time_slots: slots,  // Return actual time slots for caching
         is_available: slots.length > 0,
-        is_returning_provider: returningProviderIds.indexOf(p.provider_id) !== -1
+        is_returning_provider: false  // Will be set after cache retrieval based on clientId
       };
     });
 
-    return {
+    // Build result for caching (without client-specific returning flags)
+    var result = {
       success: true,
       providers: results
     };
+
+    // CACHING: Store result in cache for 5 minutes (300 seconds)
+    try {
+      cache.put(cacheKey, JSON.stringify(result), 300);
+      Logger.log('Cached availability for ' + cacheKey + ' (expires in 5 minutes)');
+    } catch (cacheError) {
+      // Cache errors are non-fatal, just log and continue
+      Logger.log('Warning: Failed to cache result: ' + cacheError.toString());
+    }
+
+    // Add returning provider flags based on current client
+    result.providers = result.providers.map(function(p) {
+      p.is_returning_provider = returningProviderIds.indexOf(p.provider_id) !== -1;
+      return p;
+    });
+
+    return result;
 
   } catch (error) {
     Logger.log('Error in getAllProvidersAvailability: ' + error.toString());
@@ -879,4 +921,265 @@ function providerOffersServiceCheck(provider, serviceId) {
   }
   var services = provider.services_offered.split('|').map(function(s) { return s.trim(); });
   return services.indexOf(serviceId) !== -1;
+}
+
+/**
+ * Clears the availability cache
+ * Should be called when appointments are created, updated, or deleted
+ * @param {string} [dateStr] - Optional specific date to clear (YYYY-MM-DD), or clear all if not provided
+ */
+function clearAvailabilityCache(dateStr) {
+  try {
+    var cache = CacheService.getScriptCache();
+
+    if (dateStr) {
+      // Clear cache for specific date (all durations and services)
+      // We don't know which durations/services are cached, so we'd need to clear all
+      // Apps Script CacheService doesn't support pattern-based clearing, so clear all
+      cache.removeAll(cache.getKeys());
+      Logger.log('Cleared availability cache for date: ' + dateStr);
+    } else {
+      // Clear entire cache
+      cache.removeAll(cache.getKeys());
+      Logger.log('Cleared entire availability cache');
+    }
+
+    return true;
+  } catch (error) {
+    Logger.log('Error clearing availability cache: ' + error.toString());
+    return false;
+  }
+}
+
+/**
+ * OPTIMIZATION HELPER: Checks if date is a business holiday using cached data
+ * @param {Date} date - The date to check
+ * @param {Array<Object>} holidays - Pre-loaded business holidays
+ * @returns {boolean} True if date is a business holiday
+ */
+function isBusinessHolidayFromCache(date, holidays) {
+  var targetDate = normalizeDate(date);
+  var parsedDate = typeof date === 'string' ? parseDateInTimezone(date) : date;
+  var targetMonth = parsedDate.getMonth();
+  var targetDay = parsedDate.getDate();
+
+  for (var i = 0; i < holidays.length; i++) {
+    var holiday = holidays[i];
+    var holidayDate = typeof holiday.date === 'string'
+      ? parseDateInTimezone(holiday.date)
+      : holiday.date;
+
+    // For recurring holidays, check month and day
+    if (holiday.recurring === 'Yes') {
+      if (holidayDate.getMonth() === targetMonth &&
+          holidayDate.getDate() === targetDay) {
+        return true;
+      }
+    } else {
+      // For non-recurring holidays, check exact date
+      if (normalizeDate(holidayDate) === targetDate) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * OPTIMIZATION HELPER: Gets provider availability using cached data (no sheet reads)
+ * Replicates logic from Availability.gs getProviderAvailability() but uses pre-loaded data
+ * @param {string} providerId - The provider ID
+ * @param {Date} date - The date to check
+ * @param {string} dayName - Day name (e.g., 'Monday')
+ * @param {string} targetDate - Normalized date string (YYYY-MM-DD)
+ * @param {Object} cachedData - Pre-loaded sheet data
+ * @returns {Array<Object>} Array of available time windows {start, end}
+ */
+function getProviderAvailabilityFromCache(providerId, date, dayName, targetDate, cachedData) {
+  // Step 1: Get recurring availability for this day of week
+  var availableWindows = getRecurringAvailabilityFromCache(
+    providerId,
+    dayName,
+    date,
+    cachedData.providerAvailability
+  );
+
+  if (availableWindows.length === 0) {
+    return [];
+  }
+
+  // Step 2: Subtract provider exceptions
+  availableWindows = subtractProviderExceptionsFromCache(
+    providerId,
+    targetDate,
+    availableWindows,
+    cachedData.providerExceptions
+  );
+
+  // Step 3: Subtract business exceptions
+  availableWindows = subtractBusinessExceptionsFromCache(
+    targetDate,
+    availableWindows,
+    cachedData.businessExceptions
+  );
+
+  // Step 4: Subtract existing appointments
+  availableWindows = subtractExistingAppointmentsFromCache(
+    providerId,
+    targetDate,
+    availableWindows,
+    cachedData.appointments
+  );
+
+  return availableWindows;
+}
+
+/**
+ * OPTIMIZATION HELPER: Gets recurring availability using cached data
+ * @param {string} providerId - The provider ID
+ * @param {string} dayName - Day name (e.g., 'Monday')
+ * @param {Date} targetDate - The target date
+ * @param {Array<Object>} availabilityRecords - Pre-loaded availability records
+ * @returns {Array<Object>} Array of time windows
+ */
+function getRecurringAvailabilityFromCache(providerId, dayName, targetDate, availabilityRecords) {
+  var windows = [];
+
+  for (var i = 0; i < availabilityRecords.length; i++) {
+    var record = availabilityRecords[i];
+
+    // Filter by provider ID
+    if (record.provider_id !== providerId) {
+      continue;
+    }
+
+    // Check if this record applies to the day of week
+    if (record.day_of_week !== dayName) {
+      continue;
+    }
+
+    // Check if recurring or within effective date range
+    if (record.is_recurring !== 'Yes') {
+      // Non-recurring: check effective dates
+      if (record.effective_date_start) {
+        var effectiveStart = new Date(record.effective_date_start);
+        if (targetDate < effectiveStart) {
+          continue;
+        }
+      }
+      if (record.effective_date_end) {
+        var effectiveEnd = new Date(record.effective_date_end);
+        if (targetDate > effectiveEnd) {
+          continue;
+        }
+      }
+    }
+
+    // Add this window
+    windows.push({
+      start: parseTimeToMinutes(record.start_time),
+      end: parseTimeToMinutes(record.end_time)
+    });
+  }
+
+  // Merge overlapping windows (using existing function from Availability.gs)
+  return mergeTimeWindows(windows);
+}
+
+/**
+ * OPTIMIZATION HELPER: Subtracts provider exceptions using cached data
+ * @param {string} providerId - The provider ID
+ * @param {string} targetDate - Normalized date (YYYY-MM-DD)
+ * @param {Array<Object>} windows - Current available windows
+ * @param {Array<Object>} providerExceptions - Pre-loaded provider exceptions
+ * @returns {Array<Object>} Updated windows
+ */
+function subtractProviderExceptionsFromCache(providerId, targetDate, windows, providerExceptions) {
+  // Filter exceptions for this provider and date
+  var exceptions = providerExceptions.filter(function(exc) {
+    return exc.provider_id === providerId &&
+           normalizeDate(exc.exception_date) === targetDate;
+  });
+
+  for (var i = 0; i < exceptions.length; i++) {
+    var exc = exceptions[i];
+
+    // If no times specified, the entire day is blocked
+    if (!exc.start_time || !exc.end_time ||
+        exc.start_time === '00:00' && exc.end_time === '23:59') {
+      return [];
+    }
+
+    var excStart = parseTimeToMinutes(exc.start_time);
+    var excEnd = parseTimeToMinutes(exc.end_time);
+
+    windows = subtractTimeRange(windows, excStart, excEnd);
+  }
+
+  return windows;
+}
+
+/**
+ * OPTIMIZATION HELPER: Subtracts business exceptions using cached data
+ * @param {string} targetDate - Normalized date (YYYY-MM-DD)
+ * @param {Array<Object>} windows - Current available windows
+ * @param {Array<Object>} businessExceptions - Pre-loaded business exceptions
+ * @returns {Array<Object>} Updated windows
+ */
+function subtractBusinessExceptionsFromCache(targetDate, windows, businessExceptions) {
+  // Filter exceptions for this date
+  var exceptions = businessExceptions.filter(function(exc) {
+    return normalizeDate(exc.date) === targetDate;
+  });
+
+  for (var i = 0; i < exceptions.length; i++) {
+    var exc = exceptions[i];
+
+    if (!exc.start_time || !exc.end_time) {
+      continue;
+    }
+
+    var excStart = parseTimeToMinutes(exc.start_time);
+    var excEnd = parseTimeToMinutes(exc.end_time);
+
+    windows = subtractTimeRange(windows, excStart, excEnd);
+  }
+
+  return windows;
+}
+
+/**
+ * OPTIMIZATION HELPER: Subtracts existing appointments using cached data
+ * @param {string} providerId - The provider ID
+ * @param {string} targetDate - Normalized date (YYYY-MM-DD)
+ * @param {Array<Object>} windows - Available windows
+ * @param {Array<Object>} appointments - Pre-loaded appointments
+ * @returns {Array<Object>} Windows with appointments subtracted
+ */
+function subtractExistingAppointmentsFromCache(providerId, targetDate, windows, appointments) {
+  // Filter appointments for this provider and date
+  var providerAppointments = appointments.filter(function(apt) {
+    return apt.provider_id === providerId &&
+           normalizeDate(apt.appointment_date) === targetDate;
+  });
+
+  // Define active statuses that block time slots
+  var activeStatuses = ['Booked', 'Confirmed', 'Checked-in'];
+
+  for (var i = 0; i < providerAppointments.length; i++) {
+    var apt = providerAppointments[i];
+
+    // Skip closed appointments - they don't block the calendar
+    if (activeStatuses.indexOf(apt.status) === -1) {
+      continue;
+    }
+
+    var aptStart = parseTimeToMinutes(apt.start_time);
+    var aptEnd = parseTimeToMinutes(apt.end_time);
+
+    windows = subtractTimeRange(windows, aptStart, aptEnd);
+  }
+
+  return windows;
 }

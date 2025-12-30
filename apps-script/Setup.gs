@@ -80,6 +80,8 @@ function onOpen() {
           .addItem('Add Sample Data', 'addSampleData')
           .addItem('Clear All Data', 'clearAllData')
           .addSeparator()
+          .addItem('Archive Old Appointments', 'archiveOldAppointmentsUI')
+          .addSeparator()
           .addSubMenu(ui.createMenu('Calendar')
             .addItem('Sync Missing Calendar Events', 'syncAllMissingCalendarEvents')
             .addItem('Update Calendar Colors', 'updateAllProviderCalendarColors')

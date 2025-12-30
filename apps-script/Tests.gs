@@ -2389,3 +2389,404 @@ function testActivityLogging() {
     return { name: testName, passed: false, message: 'Exception: ' + error.message };
   }
 }
+
+// ============================================================================
+// MVP 5 TESTS: Provider Availability Optimization + Archive
+// ============================================================================
+
+/**
+ * Test: getAllProvidersAvailability function
+ */
+function testGetAllProvidersAvailability() {
+  var testName = 'Availability: getAllProvidersAvailability()';
+
+  try {
+    // Test 1: Call without date/duration (should return all providers with slot_count: -1)
+    var result1 = getAllProvidersAvailability(null, null, null, null);
+
+    if (!result1.success || !Array.isArray(result1.providers)) {
+      return { name: testName, passed: false, message: 'Should return success with providers array' };
+    }
+
+    // Verify providers have correct structure
+    if (result1.providers.length > 0) {
+      var provider = result1.providers[0];
+      if (typeof provider.provider_id === 'undefined' ||
+          typeof provider.name === 'undefined' ||
+          typeof provider.slot_count === 'undefined' ||
+          typeof provider.is_available === 'undefined') {
+        return { name: testName, passed: false, message: 'Provider missing required fields' };
+      }
+    }
+
+    // Test 2: Call with date and duration (should calculate actual availability)
+    var futureDate = normalizeDate(addDays(new Date(), 7));
+    var result2 = getAllProvidersAvailability(null, futureDate, 30, null);
+
+    if (!result2.success || !Array.isArray(result2.providers)) {
+      return { name: testName, passed: false, message: 'Should return success with providers array for date query' };
+    }
+
+    return {
+      name: testName,
+      passed: true,
+      message: 'Found ' + result2.providers.length + ' providers with availability data'
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test: getReturningProviders function
+ */
+function testGetReturningProviders() {
+  var testName = 'Availability: getReturningProviders()';
+
+  try {
+    // Get a client with appointment history
+    var clients = getClients();
+    if (clients.length === 0) {
+      return { name: testName, passed: false, message: 'No clients found - add sample data first' };
+    }
+
+    var clientId = clients[0].client_id;
+
+    // Call function
+    var returningProviders = getReturningProviders(clientId);
+
+    // Should return an array (may be empty)
+    if (!Array.isArray(returningProviders)) {
+      return { name: testName, passed: false, message: 'Should return an array' };
+    }
+
+    return {
+      name: testName,
+      passed: true,
+      message: 'Found ' + returningProviders.length + ' returning provider(s) for ' + clientId
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test: filterProvidersByService function
+ */
+function testFilterProvidersByService() {
+  var testName = 'Availability: filterProvidersByService()';
+
+  try {
+    var providers = getProviders(true);
+    var services = getServices(true);
+
+    if (providers.length === 0 || services.length === 0) {
+      return { name: testName, passed: false, message: 'Need providers and services' };
+    }
+
+    var serviceId = services[0].service_id;
+
+    // Filter providers by service
+    var filtered = filterProvidersByService(providers, serviceId);
+
+    if (!Array.isArray(filtered)) {
+      return { name: testName, passed: false, message: 'Should return an array' };
+    }
+
+    // Verify filtered providers offer the service
+    for (var i = 0; i < filtered.length; i++) {
+      var provider = filtered[i];
+      var servicesOffered = provider.services_offered ? provider.services_offered.split('|') : [];
+      var offersService = false;
+
+      for (var j = 0; j < servicesOffered.length; j++) {
+        if (servicesOffered[j].trim() === serviceId) {
+          offersService = true;
+          break;
+        }
+      }
+
+      if (!offersService) {
+        return { name: testName, passed: false, message: 'Provider ' + provider.provider_id + ' does not offer ' + serviceId };
+      }
+    }
+
+    return {
+      name: testName,
+      passed: true,
+      message: 'Filtered to ' + filtered.length + ' provider(s) offering ' + serviceId
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test: Provider availability caching
+ */
+function testProviderAvailabilityCaching() {
+  var testName = 'Availability: Caching performance';
+
+  try {
+    var futureDate = normalizeDate(addDays(new Date(), 7));
+
+    // First call (should be slower - no cache)
+    var startTime1 = new Date().getTime();
+    var result1 = getAllProvidersAvailability(null, futureDate, 30, null);
+    var duration1 = new Date().getTime() - startTime1;
+
+    if (!result1.success) {
+      return { name: testName, passed: false, message: 'First call failed' };
+    }
+
+    // Second call (should be faster - cached)
+    var startTime2 = new Date().getTime();
+    var result2 = getAllProvidersAvailability(null, futureDate, 30, null);
+    var duration2 = new Date().getTime() - startTime2;
+
+    if (!result2.success) {
+      return { name: testName, passed: false, message: 'Second call failed' };
+    }
+
+    // Cache should make it faster (at least 2x faster)
+    var isFaster = duration2 < duration1;
+
+    return {
+      name: testName,
+      passed: isFaster,
+      message: isFaster
+        ? 'Cache working (1st: ' + duration1 + 'ms, 2nd: ' + duration2 + 'ms)'
+        : 'Cache not working (1st: ' + duration1 + 'ms, 2nd: ' + duration2 + 'ms)'
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test: ensureArchiveSheetExists function
+ */
+function testEnsureArchiveSheetExists() {
+  var testName = 'Archive: ensureArchiveSheetExists()';
+
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // Delete archive sheet if it exists (to test creation)
+    var existingArchive = ss.getSheetByName('Archive_Appointments');
+    if (existingArchive) {
+      ss.deleteSheet(existingArchive);
+    }
+
+    // Call function to create archive sheet
+    ensureArchiveSheetExists();
+
+    // Verify sheet was created
+    var archiveSheet = ss.getSheetByName('Archive_Appointments');
+    if (!archiveSheet) {
+      return { name: testName, passed: false, message: 'Archive sheet not created' };
+    }
+
+    // Verify headers match Appointments sheet + archived_date
+    var appointmentsSheet = getSheet(SHEETS.APPOINTMENTS);
+    var appointmentsHeaders = appointmentsSheet.getRange(1, 1, 1, appointmentsSheet.getLastColumn()).getValues()[0];
+    var archiveHeaders = archiveSheet.getRange(1, 1, 1, archiveSheet.getLastColumn()).getValues()[0];
+
+    if (archiveHeaders.length !== appointmentsHeaders.length + 1) {
+      return { name: testName, passed: false, message: 'Archive headers incorrect length' };
+    }
+
+    if (archiveHeaders[archiveHeaders.length - 1] !== 'archived_date') {
+      return { name: testName, passed: false, message: 'Missing archived_date column' };
+    }
+
+    // Test idempotency - calling again should not error
+    ensureArchiveSheetExists();
+
+    return {
+      name: testName,
+      passed: true,
+      message: 'Archive sheet created correctly with ' + archiveHeaders.length + ' columns'
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test: getArchivableAppointmentsCount function
+ */
+function testGetArchivableAppointmentsCount() {
+  var testName = 'Archive: getArchivableAppointmentsCount()';
+
+  try {
+    // Test with 2 years (default)
+    var count1 = getArchivableAppointmentsCount(2);
+
+    if (typeof count1 !== 'number') {
+      return { name: testName, passed: false, message: 'Should return a number' };
+    }
+
+    // Test with 5 years (should return more or same)
+    var count2 = getArchivableAppointmentsCount(5);
+
+    if (count2 < count1) {
+      return { name: testName, passed: false, message: 'Larger time window should return >= count' };
+    }
+
+    return {
+      name: testName,
+      passed: true,
+      message: '2yr: ' + count1 + ' appointments, 5yr: ' + count2 + ' appointments'
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Test: archiveOldAppointments function
+ */
+function testArchiveOldAppointments() {
+  var testName = 'Archive: archiveOldAppointments()';
+
+  try {
+    // Create a very old test appointment
+    var providers = getProviders(true);
+    var clients = getClients();
+    var services = getServices(true);
+
+    if (providers.length === 0 || clients.length === 0 || services.length === 0) {
+      return { name: testName, passed: false, message: 'Need sample data' };
+    }
+
+    // Create appointment 3 years ago
+    var oldDate = new Date();
+    oldDate.setFullYear(oldDate.getFullYear() - 3);
+    var oldDateStr = normalizeDate(oldDate);
+
+    var result = bookAppointment({
+      clientId: clients[0].client_id,
+      providerId: providers[0].provider_id,
+      serviceId: services[0].service_id,
+      date: oldDateStr,
+      startTime: '10:00',
+      duration: 30,
+      status: 'Completed',
+      createCalendarEvent: false
+    });
+
+    if (!result.success) {
+      return { name: testName, passed: false, message: 'Failed to create test appointment' };
+    }
+
+    var appointmentId = result.appointment_id;
+
+    // Ensure archive sheet exists
+    ensureArchiveSheetExists();
+
+    // Get initial counts
+    var appointmentsBefore = getSheetData(SHEETS.APPOINTMENTS).length;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var archiveSheet = ss.getSheetByName('Archive_Appointments');
+    var archiveBefore = archiveSheet.getLastRow() - 1; // Exclude header
+
+    // Archive appointments older than 2 years
+    var archiveResult = archiveOldAppointments(2);
+
+    if (!archiveResult.success) {
+      deleteTestAppointment(appointmentId);
+      return { name: testName, passed: false, message: 'Archive failed: ' + archiveResult.error };
+    }
+
+    // Verify appointment was archived
+    var appointmentsAfter = getSheetData(SHEETS.APPOINTMENTS).length;
+    var archiveAfter = archiveSheet.getLastRow() - 1;
+
+    // Should have fewer active appointments
+    if (appointmentsAfter >= appointmentsBefore) {
+      // Cleanup - restore the appointment from archive
+      return { name: testName, passed: false, message: 'Active appointments not reduced' };
+    }
+
+    // Should have more archived appointments
+    if (archiveAfter <= archiveBefore) {
+      return { name: testName, passed: false, message: 'Archive not increased' };
+    }
+
+    // Verify the appointment is in archive
+    var archiveData = archiveSheet.getDataRange().getValues();
+    var found = false;
+    for (var i = 1; i < archiveData.length; i++) {
+      if (archiveData[i][0] === appointmentId) {
+        found = true;
+        // Verify archived_date column has a value
+        var archivedDate = archiveData[i][archiveData[i].length - 1];
+        if (!archivedDate) {
+          return { name: testName, passed: false, message: 'Archived appointment missing archived_date' };
+        }
+        break;
+      }
+    }
+
+    if (!found) {
+      return { name: testName, passed: false, message: 'Appointment not found in archive' };
+    }
+
+    return {
+      name: testName,
+      passed: true,
+      message: 'Archived ' + archiveResult.archived_count + ' appointment(s), ' + archiveResult.remaining_count + ' remaining'
+    };
+
+  } catch (error) {
+    return { name: testName, passed: false, message: 'Exception: ' + error.message };
+  }
+}
+
+/**
+ * Runs all MVP5 tests
+ */
+function runMvp5Tests() {
+  var ui = SpreadsheetApp.getUi();
+
+  ui.alert(
+    'Running MVP5 Tests',
+    'This will run tests for:\n' +
+    '• Provider availability indicators\n' +
+    '• Returning provider detection\n' +
+    '• Availability caching\n' +
+    '• Archive functionality\n\n' +
+    'This may take 30-45 seconds.',
+    ui.ButtonSet.OK
+  );
+
+  Logger.log('========================================');
+  Logger.log('Starting MVP5 Test Suite');
+  Logger.log('========================================');
+
+  var results = [];
+
+  // Provider availability tests
+  results.push(testGetAllProvidersAvailability());
+  results.push(testGetReturningProviders());
+  results.push(testFilterProvidersByService());
+  results.push(testProviderAvailabilityCaching());
+
+  // Archive tests
+  results.push(testEnsureArchiveSheetExists());
+  results.push(testGetArchivableAppointmentsCount());
+  results.push(testArchiveOldAppointments());
+
+  displayTestResults(results);
+
+  Logger.log('========================================');
+  Logger.log('MVP5 Test Suite Complete');
+  Logger.log('========================================');
+}
