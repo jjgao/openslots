@@ -226,7 +226,7 @@
       </div>
 
       <div class="form-group">
-        <label for="provider">Provider *</label>
+        <label for="provider">Provider * <span id="providerAvailabilityLoading" class="loading" style="display: none; font-size: 0.9em; color: #666;">(checking availability...)</span></label>
         <select id="provider" onchange="onProviderChange()">
           <option value="">Select provider...</option>
         </select>
@@ -677,17 +677,22 @@
       if (!date || !duration) {
         console.log('Missing date or duration, resetting dropdown');
         resetProviderDropdown();
+        hideProviderAvailabilityLoading();
         return;
       }
 
       var providerSelect = document.getElementById('provider');
       var currentSelection = providerSelect.value;
 
+      // Show loading indicator
+      showProviderAvailabilityLoading();
+
       console.log('Calling backend getAllProvidersAvailability...');
 
       // Call backend to get availability for all providers
       google.script.run
         .withSuccessHandler(function(result) {
+          hideProviderAvailabilityLoading();
           console.log('Backend response:', result);
           if (result.success) {
             updateProviderDropdownOptions(result.providers, currentSelection);
@@ -696,9 +701,30 @@
           }
         })
         .withFailureHandler(function(error) {
+          hideProviderAvailabilityLoading();
           console.error('Failed to get provider availability:', error);
         })
         .getAllProvidersAvailability(serviceId, date, parseInt(duration), clientId);
+    }
+
+    /**
+     * Shows the provider availability loading indicator
+     */
+    function showProviderAvailabilityLoading() {
+      var loadingIndicator = document.getElementById('providerAvailabilityLoading');
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'inline';
+      }
+    }
+
+    /**
+     * Hides the provider availability loading indicator
+     */
+    function hideProviderAvailabilityLoading() {
+      var loadingIndicator = document.getElementById('providerAvailabilityLoading');
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+      }
     }
 
     /**
