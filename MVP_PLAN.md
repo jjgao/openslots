@@ -174,7 +174,57 @@ Each MVP is a **fully functional, testable version** of the system that delivers
 
 ---
 
-## 🎯 MVP 5: Daily Lists + Provider Notifications
+## 🎯 MVP 5: Provider Availability Optimization + Archive ✅ COMPLETE
+
+**Goal**: Optimize booking workflow by showing provider availability upfront. Add archival for performance.
+
+**Timeline**: 3-4 days
+
+**What's Added**:
+- Batch provider availability checking (single backend call for all providers)
+- Provider availability indicators in dropdown (slot counts)
+- Returning provider indicators (★ shows providers who previously served client)
+- CacheService integration (5-minute cache, <50ms cached queries)
+- Batch data loading (read each sheet once, not per provider)
+- Archive functionality for old appointments (manual trigger)
+- Comprehensive test coverage (7 new tests in MVP5 test suite)
+
+**What Users Can Do**:
+- See availability for ALL providers before selecting one (no trial-and-error)
+- Identify returning providers easily (★ indicator for providers who served this client before)
+- Archive old appointments to keep main sheet performant
+- Experience faster booking (<1 second provider availability updates)
+
+**Issues for MVP 5**:
+- Implemented via feature branch (provider-availability-indicators)
+- #47: Add provider availability indicators to booking UI
+- Code cleanup: Fixed ES6 syntax bug, removed duplicate utilities
+- Documentation: Updated CLAUDE.MD with MVP3-5 features
+
+**Success Criteria**:
+- ✅ Provider dropdown shows slot counts for all providers
+- ✅ Returning providers marked with ★ indicator
+- ✅ Batch availability check completes in <1 second for 10 providers
+- ✅ Cache reduces repeated queries from ~1s to <50ms
+- ✅ Archive functionality moves old appointments to Archive sheet
+- ✅ Comprehensive test coverage (testGetAllProvidersAvailability, testGetReturningProviders, etc.)
+
+**Testing Plan**:
+1. Test provider availability indicators with various date/service combinations
+2. Test returning provider indicators with new and existing clients
+3. Verify cache performance (first query ~1s, cached queries <50ms)
+4. Test archive functionality with appointments older than 2 years
+5. Run MVP5 test suite (7 tests covering all functionality)
+
+**Performance Optimizations**:
+- Reduced sheet reads from ~20 to 5 (batch data loading)
+- CacheService with 5-minute expiration for availability queries
+- Column-based filtering for appointments (faster than row-by-row)
+- Time slot caching in frontend (instant display when switching providers)
+
+---
+
+## 🎯 MVP 6: Daily Lists + Provider Notifications
 
 **Goal**: Automate provider communication. Reduce manual coordination.
 
@@ -192,7 +242,7 @@ Each MVP is a **fully functional, testable version** of the system that delivers
 - Configure when daily lists are sent
 - No manual email coordination needed
 
-**Issues for MVP 5**:
+**Issues for MVP 6**:
 - #4: Populate System_Config with default settings
 - #22: Implement daily list generation
 - #23: Set up time-based trigger for daily lists
@@ -212,7 +262,7 @@ Each MVP is a **fully functional, testable version** of the system that delivers
 
 ---
 
-## 🎯 MVP 6: Confirmation Tracking
+## 🎯 MVP 7: Confirmation Tracking
 
 **Goal**: Track which clients have been contacted and confirmed.
 
@@ -229,8 +279,8 @@ Each MVP is a **fully functional, testable version** of the system that delivers
 - See which appointments need confirmation
 - Auto-cancel if client declined
 
-**Issues for MVP 6**:
-- #20: Implement confirmation tracking
+**Issues for MVP 7**:
+- #25: Implement confirmation tracking
 - Enhancement to booking UI: show confirmation status
 
 **Success Criteria**:
@@ -247,7 +297,7 @@ Each MVP is a **fully functional, testable version** of the system that delivers
 
 ---
 
-## 🎯 MVP 7: Basic Reporting
+## 🎯 MVP 8: Basic Reporting
 
 **Goal**: Understand business metrics and provider performance.
 
@@ -266,12 +316,12 @@ Each MVP is a **fully functional, testable version** of the system that delivers
 - Track cancellation and no-show rates
 - Identify problem patterns
 
-**Issues for MVP 7**:
-- #27: Create daily schedule report
-- #28: Create weekly schedule overview
-- #29: Create provider utilization report
-- #30: Create cancellation and no-show report
-- #31: Create client visit history report
+**Issues for MVP 8**:
+- #26: Create daily schedule report
+- #27: Create weekly schedule overview
+- #28: Create provider utilization report
+- #29: Create cancellation and no-show report
+- #30: Create client visit history report
 
 **Success Criteria**:
 - ✅ All reports generate correctly
@@ -287,7 +337,7 @@ Each MVP is a **fully functional, testable version** of the system that delivers
 
 ---
 
-## 🎯 MVP 8: Polish + Production Ready
+## 🎯 MVP 9: Polish + Production Ready
 
 **Goal**: Production-ready system with training and documentation.
 
@@ -308,16 +358,16 @@ Each MVP is a **fully functional, testable version** of the system that delivers
 - Recover from errors
 - Request support when needed
 
-**Issues for MVP 8**:
-- #25: Implement automatic calendar sync (safety mechanism)
+**Issues for MVP 9**:
+- #31: Implement automatic calendar sync (safety mechanism)
 - #32: Create activity log report
-- #34: Create test plan and test cases
-- #35: Perform user acceptance testing (UAT)
-- #36: Create user documentation
-- #37: Create admin documentation
-- #38: Conduct receptionist training sessions
-- #39: Set up backup and disaster recovery
-- #40: Launch system and monitor
+- #33: Create test plan and test cases
+- #34: Perform user acceptance testing (UAT)
+- #35: Create user documentation
+- #36: Create admin documentation
+- #37: Conduct receptionist training sessions
+- #38: Set up backup and disaster recovery
+- #39: Launch system and monitor
 
 **Success Criteria**:
 - ✅ All core workflows tested and working
@@ -337,18 +387,19 @@ Each MVP is a **fully functional, testable version** of the system that delivers
 
 ## 📊 MVP Comparison Table
 
-| MVP | Core Value | User-Facing Features | Technical Complexity | Time Estimate |
-|-----|------------|---------------------|---------------------|---------------|
-| **MVP 1** | Structured booking | Manual booking, basic validation | Low | 1-2 days |
-| **MVP 2** | Calendar sync | Auto calendar events, double-book prevention | Medium | 2-3 days |
-| **MVP 3** | Fast booking | Booking UI, client search, history | Medium | 3-4 days |
-| **MVP 4** | Full lifecycle | Cancel, reschedule, check-in, logging | Medium | 2-3 days |
-| **MVP 5** | Provider automation | Daily lists, change notifications | Medium-High | 2-3 days |
-| **MVP 6** | Confirmation tracking | Log confirmations, track responses | Low | 1-2 days |
-| **MVP 7** | Analytics | Reports and insights | Medium | 2-3 days |
-| **MVP 8** | Production ready | Documentation, training, monitoring | Low-Medium | 3-5 days |
+| MVP | Core Value | User-Facing Features | Technical Complexity | Time Estimate | Status |
+|-----|------------|---------------------|---------------------|---------------|--------|
+| **MVP 1** | Structured booking | Manual booking, basic validation | Low | 1-2 days | ✅ COMPLETE |
+| **MVP 2** | Calendar sync | Auto calendar events, double-book prevention | Medium | 2-3 days | ✅ COMPLETE |
+| **MVP 3** | Fast booking | Booking UI, client search, history | Medium | 3-4 days | ✅ COMPLETE |
+| **MVP 4** | Full lifecycle | Cancel, reschedule, check-in, logging | Medium | 2-3 days | ✅ COMPLETE |
+| **MVP 5** | Availability optimization | Provider slot counts, returning indicators, caching, archive | Medium-High | 3-4 days | ✅ COMPLETE |
+| **MVP 6** | Provider automation | Daily lists, change notifications | Medium-High | 2-3 days | Planned |
+| **MVP 7** | Confirmation tracking | Log confirmations, track responses | Low | 1-2 days | Planned |
+| **MVP 8** | Analytics | Reports and insights | Medium | 2-3 days | Planned |
+| **MVP 9** | Production ready | Documentation, training, monitoring | Low-Medium | 3-5 days | Planned |
 
-**Total Estimated Time**: 17-27 days (3-5 weeks)
+**Total Estimated Time**: 20-30 days (4-6 weeks)
 
 ---
 
@@ -481,11 +532,19 @@ This gives you a **working appointment booking system in ~2 weeks** that you can
 
 ---
 
-## 📝 Next Steps
+## 📝 Current Status & Next Steps
 
-1. **Review this MVP plan** - Does the sequence make sense?
-2. **Choose starting MVP** - Want to start with MVP 1?
-3. **Set up workspace** - Create Google Sheet and repo
-4. **Begin MVP 1** - I can help build it!
+**Completed MVPs**: MVP 1-5 ✅
+- MVP 1: Foundation (11 sheets, validation, IDs, tests)
+- MVP 2: Calendar integration (auto sync, conflict prevention)
+- MVP 3: Client management + booking UI (search, history, sidebar)
+- MVP 4: Appointment lifecycle (cancel, reschedule, check-in, no-show)
+- MVP 5: Availability optimization (batch checking, caching, returning providers, archive)
 
-Ready to start with MVP 1?
+**Next Up**: MVP 6 - Daily Lists + Provider Notifications
+- Automated daily appointment lists (email to providers)
+- Time-based triggers
+- Change notifications
+
+**Repository**: https://github.com/jjgao/openslots
+**Current Branch**: feature/provider-availability-indicators (ready to merge to main)
