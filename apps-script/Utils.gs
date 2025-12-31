@@ -54,6 +54,15 @@ function parseTimeToMinutes(time) {
 }
 
 /**
+ * Pads single digit numbers with leading zero
+ * @param {number} num - Number to pad
+ * @returns {string} Padded string (e.g., 5 -> "05", 15 -> "15")
+ */
+function padZero(num) {
+  return num < 10 ? '0' + num : '' + num;
+}
+
+/**
  * Converts minutes since midnight to HH:MM string
  * @param {number} minutes - Minutes since midnight
  * @returns {string} Time in HH:MM format
@@ -61,7 +70,7 @@ function parseTimeToMinutes(time) {
 function minutesToTimeString(minutes) {
   var hours = Math.floor(minutes / 60);
   var mins = minutes % 60;
-  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+  return padZero(hours) + ':' + padZero(mins);
 }
 
 /**

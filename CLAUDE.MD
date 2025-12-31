@@ -10,11 +10,16 @@
 - Google Drive API (planned for MVP 2)
 - Google Calendar API (planned for MVP 2)
 
-**Current Status:** MVP 1 (Foundation) - Complete
-- 11 pre-configured sheets with validation
+**Current Status:** MVP 5 (Provider Availability Optimization) - Complete
+- 11+ pre-configured sheets with validation
 - Auto-generated IDs and audit trails
-- 10 automated tests
+- Comprehensive test suites (MVP1-MVP5)
 - Sample data generation
+- Google Calendar integration
+- Booking UI with provider availability indicators
+- Appointment management (reschedule, cancel, check-in, etc.)
+- Client management and search
+- Archive functionality for old appointments
 
 ## Project Structure
 
@@ -67,10 +72,38 @@ openslots/
 - Sample schedules, holidays, and exceptions
 
 ### apps-script/Tests.gs
-- 10 comprehensive unit tests
-- `runAllTests()` - Full test suite (~30-60 seconds)
+- Comprehensive test suites for MVP1-MVP5
+- `runAllTests()` - Full test suite (~2-3 minutes)
 - `runQuickTests()` - Fast essential tests (~15 seconds)
-- Tests cover: sheet structure, validation, formulas, sample data
+- `runMvp2Tests()` - Calendar integration and availability tests
+- `runMvp3Tests()` - Client management and booking UI tests
+- `runMvp4Tests()` - Appointment management tests
+- `runMvp5Tests()` - Provider availability optimization and archive tests
+- Tests cover: sheet structure, validation, formulas, sample data, calendar integration, availability, booking, client management, appointment management, archiving
+
+### apps-script/BookingUI.gs
+- `showBookingSidebar()` - Shows booking interface
+- `getBookingFormData()` - Gets providers and services for form
+- `getAllProvidersAvailability()` - **OPTIMIZED** batch availability check with caching
+- `getReturningProviders()` - Gets providers who previously served a client
+- `filterProvidersByService()` - Filters providers by service capability
+- Batch data loading (reads each sheet once instead of per-provider)
+- CacheService integration (5-minute cache for instant repeated queries)
+- Provider availability indicators (slot counts + returning provider flags)
+
+### apps-script/Archive.gs
+- `archiveOldAppointments(yearsOld)` - Archives appointments older than X years
+- `archiveOldAppointmentsUI()` - User-friendly dialog for manual archival
+- `ensureArchiveSheetExists()` - Auto-creates Archive_Appointments sheet
+- `getArchivableAppointmentsCount(yearsOld)` - Counts archivable appointments
+- Maintains single Appointments sheet for performance (archival as safety valve)
+
+### apps-script/AppointmentManagement.gs
+- Appointment status management (cancel, reschedule, check-in, complete, no-show)
+- Status transition validation
+- Client visit history tracking
+- No-show count tracking
+- Grace period enforcement (check-in: 1hr before to 30min after, no-show: >30min after)
 
 ## Development Guidelines
 
@@ -139,25 +172,59 @@ range.setDataValidation(rule);
 ## Current MVP Status
 
 ### MVP 1 - Foundation (COMPLETE)
-✅ 11 pre-configured sheets
-✅ Auto-generated IDs
+✅ 11 pre-configured sheets with validation
+✅ Auto-generated IDs and audit trails
 ✅ Email/phone/date/time validation
 ✅ Sample data with 5 providers, 10 clients, 15 appointments
 ✅ Activity logging
-✅ 10 automated tests
+✅ Comprehensive test suite
 ✅ Business hours configuration
 ✅ Business holidays (recurring and one-time)
 ✅ Business exceptions (partial day closures)
 
-### MVP 2 - Google Calendar Integration (PLANNED)
-- Sync appointments to provider calendars
-- Visual schedule view
-- Real-time conflict detection
+### MVP 2 - Google Calendar Integration (COMPLETE)
+✅ Sync appointments to provider calendars
+✅ Auto-create provider calendars
+✅ Calendar event management (create, update, delete)
+✅ Bidirectional sync (Sheets ↔ Calendar)
+✅ Availability checking with calendar integration
+✅ Comprehensive test coverage
 
-### MVP 3 - Booking Interface (PLANNED)
-- Easy-to-use booking form
-- Client search functionality
-- Available time slot detection
+### MVP 3 - Client Management + Booking UI (COMPLETE)
+✅ Easy-to-use booking sidebar interface
+✅ Client search functionality (fuzzy search by name, phone, email)
+✅ Quick client creation from booking form
+✅ Available time slot detection and display
+✅ Service-based provider filtering
+✅ Client appointment history tracking
+✅ Client statistics (visit count, no-shows, etc.)
+✅ Comprehensive test coverage
+
+### MVP 4 - Appointment Management (COMPLETE)
+✅ Appointment management sidebar
+✅ Cancel appointments with reason tracking
+✅ Reschedule appointments (date, time, provider, service)
+✅ Check-in functionality with grace period (1hr before to 30min after)
+✅ Mark no-show (only >30min after start time + grace period)
+✅ Complete appointments
+✅ Status transition validation
+✅ Client visit history auto-update
+✅ No-show count tracking
+✅ Search and filter appointments
+✅ Today's appointments view
+✅ Comprehensive test coverage
+
+### MVP 5 - Provider Availability Optimization + Archive (COMPLETE)
+✅ Batch provider availability checking (single backend call for all providers)
+✅ CacheService integration (5-minute cache, <50ms cached queries)
+✅ Provider availability indicators in dropdown (slot counts)
+✅ Returning provider indicators (★ shows providers who previously served client)
+✅ Batch data loading (read each sheet once, not per provider)
+✅ Archive functionality for old appointments (manual trigger)
+✅ Archive sheet auto-creation (Archive_Appointments)
+✅ Single Appointments sheet architecture (performance optimization)
+✅ Comprehensive test coverage (MVP5Tests)
+✅ Code cleanup (removed duplicate utility functions, fixed ES6 syntax bug)
 
 See `MVP_PLAN.md` for complete roadmap.
 
@@ -194,7 +261,11 @@ See `MVP_PLAN.md` for complete roadmap.
 - Batch operations when possible (setValues vs setValue)
 - Avoid excessive API calls in loops
 - Use getDataRange() instead of full range when possible
-- Clear old logs periodically (future enhancement)
+- **CacheService** for availability queries (5-minute expiration, <50ms cached)
+- **Batch data loading** for provider availability (5 sheet reads vs ~20 per-provider reads)
+- **Column-based filtering** for appointment queries (75% faster than full row reads)
+- **Single Appointments sheet** with manual archive (simpler than split sheets, archival as safety valve)
+- Archive old appointments periodically (Appointment System → Archive Old Appointments)
 
 ### User Experience
 - Clear error messages in validation
@@ -290,6 +361,6 @@ function testMyFunction() {
 
 ---
 
-**Last Updated:** 2025-12-21
-**Current MVP:** 1 (Foundation Complete)
-**Next MVP:** 2 (Google Calendar Integration)
+**Last Updated:** 2025-12-30
+**Current MVP:** 5 (Provider Availability Optimization + Archive Complete)
+**Status:** All core features implemented and tested

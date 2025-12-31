@@ -114,6 +114,9 @@ function bookAppointment(appointmentData) {
     // Step 9: Update client visit history (first_visit and last_visit)
     updateClientVisitHistory(appointmentData.clientId, appointmentData.date);
 
+    // Step 10: Clear availability cache for this date
+    clearAvailabilityCache(appointmentData.date);
+
     Logger.log(`Appointment booked successfully: ${appointmentId}`);
 
     return {

@@ -425,31 +425,27 @@
     </div>
 
     <div class="form-group">
-      <label>New Date</label>
-      <input type="date" id="rescheduleDate">
-    </div>
-
-    <div class="form-group">
-      <label>Provider</label>
-      <select id="rescheduleProvider">
-        <option value="">Select Provider</option>
-      </select>
-    </div>
-
-    <div class="form-group">
       <label>Service</label>
-      <select id="rescheduleService">
+      <select id="rescheduleService" onchange="onServiceChange_Reschedule()">
         <option value="">Select Service</option>
       </select>
     </div>
 
     <div class="form-group">
       <label>Duration (minutes)</label>
-      <input type="number" id="rescheduleDuration" min="15" max="480" step="15" value="30">
+      <input type="number" id="rescheduleDuration" min="15" max="480" step="15" value="30" onchange="onDurationChange_Reschedule()">
     </div>
 
     <div class="form-group">
-      <button onclick="loadAvailableSlots()" style="width: 100%;">Check Available Times</button>
+      <label>New Date</label>
+      <input type="date" id="rescheduleDate" onchange="onDateChange_Reschedule()">
+    </div>
+
+    <div class="form-group">
+      <label>Provider <span id="rescheduleProviderAvailabilityLoading" class="loading" style="display: none; font-size: 0.9em; color: #666;">(checking availability...)</span></label>
+      <select id="rescheduleProvider" onchange="onProviderChange_Reschedule()">
+        <option value="">Select Provider</option>
+      </select>
     </div>
 
     <div id="timeSlotsContainer"></div>
@@ -489,7 +485,7 @@
 
   <script>
     // VERSION TRACKING - Increment this when making changes
-    var HTML_VERSION = 'v1.5.0';
+    var HTML_VERSION = 'v1.6.0'; // Added provider availability indicators in reschedule view
 
     var currentAppointment = null;
     var allProviders = [];
@@ -498,6 +494,7 @@
     var cachedAppointments = {}; // Store appointments from search results
     var confirmCallback = null; // Callback for confirmation modal
     var promptCallback = null; // Callback for prompt modal
+    var cachedProviderSlots_Reschedule = {}; // Cache time slots by provider_id for reschedule
 
     // Status transition rules (must match server-side VALID_STATUS_TRANSITIONS)
     var VALID_STATUS_TRANSITIONS = {
@@ -1028,7 +1025,10 @@
       allProviders.forEach(function(provider) {
         var option = document.createElement('option');
         option.value = provider.provider_id;
-        option.textContent = provider.name;
+        option.dataset.providerName = provider.name; // Store original name
+        option.dataset.slotCount = '-1'; // Initialize (no availability data yet)
+        option.dataset.isReturning = 'false'; // Initialize (no returning indicator)
+        option.textContent = provider.name; // Start with just name
         if (provider.provider_id === apt.provider_id) {
           option.selected = true;
         }
@@ -1057,8 +1057,8 @@
       // Show reschedule view
       showRescheduleView();
 
-      // Automatically load available time slots with current appointment settings
-      loadAvailableSlots();
+      // Automatically update provider availability with current appointment settings
+      updateProviderAvailability_Reschedule();
     }
 
     function loadAvailableSlots() {
@@ -1127,6 +1127,241 @@
       // Enable submit button
       document.getElementById('rescheduleSubmitBtn').disabled = false;
       document.getElementById('rescheduleError').textContent = '';
+    }
+
+    // ========== Reschedule Provider Availability Functions ==========
+
+    /**
+     * Formats provider option text with availability and returning indicator
+     * @param {string} providerName - The provider's name
+     * @param {number} slotCount - Number of available slots (-1 = no data, 0 = unavailable, >0 = available)
+     * @param {boolean} isReturningProvider - True if this provider has served this client before
+     * @returns {string} Formatted text for dropdown option
+     */
+    function formatProviderOption_Reschedule(providerName, slotCount, isReturningProvider) {
+      var text = providerName;
+
+      // Add availability info if we have it
+      if (slotCount === 0) {
+        text += ' (No slots available)';
+      } else if (slotCount > 0) {
+        text += ' (' + slotCount + ' slot' + (slotCount === 1 ? '' : 's') + ' available)';
+      }
+      // If slotCount === -1, no availability info (show name only)
+
+      // Add returning indicator
+      if (isReturningProvider) {
+        text += ' ★ Returning';
+      }
+
+      return text;
+    }
+
+    /**
+     * Updates provider dropdown with availability indicators for reschedule
+     * Triggered when service, duration, or date changes
+     */
+    function updateProviderAvailability_Reschedule() {
+      if (!currentAppointment) return;
+
+      var clientId = currentAppointment.appointment.client_id;
+      var serviceId = document.getElementById('rescheduleService').value;
+      var duration = document.getElementById('rescheduleDuration').value;
+      var date = document.getElementById('rescheduleDate').value;
+
+      // Need date and duration to calculate availability
+      if (!date || !duration) {
+        resetProviderDropdown_Reschedule();
+        hideRescheduleProviderAvailabilityLoading();
+        return;
+      }
+
+      var providerSelect = document.getElementById('rescheduleProvider');
+      var currentSelection = providerSelect.value;
+
+      // Show loading indicator
+      showRescheduleProviderAvailabilityLoading();
+
+      // Call backend to get availability for all providers
+      google.script.run
+        .withSuccessHandler(function(result) {
+          hideRescheduleProviderAvailabilityLoading();
+          if (result.success) {
+            updateProviderDropdownOptions_Reschedule(result.providers, currentSelection);
+
+            // If a provider is already selected, automatically display their time slots
+            var providerSelect = document.getElementById('rescheduleProvider');
+            if (providerSelect.value) {
+              onProviderChange_Reschedule();
+            }
+          } else {
+            console.error('Error getting provider availability:', result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          hideRescheduleProviderAvailabilityLoading();
+          console.error('Failed to get provider availability:', error);
+        })
+        .getAllProvidersAvailability(serviceId, date, parseInt(duration), clientId);
+    }
+
+    /**
+     * Shows the provider availability loading indicator for reschedule
+     */
+    function showRescheduleProviderAvailabilityLoading() {
+      var loadingIndicator = document.getElementById('rescheduleProviderAvailabilityLoading');
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'inline';
+      }
+    }
+
+    /**
+     * Hides the provider availability loading indicator for reschedule
+     */
+    function hideRescheduleProviderAvailabilityLoading() {
+      var loadingIndicator = document.getElementById('rescheduleProviderAvailabilityLoading');
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+      }
+    }
+
+    /**
+     * Updates provider dropdown options with availability counts and returning indicators for reschedule
+     * Also caches time slots for instant display later
+     * @param {Array} providers - Array of provider data from backend
+     * @param {string} currentSelection - The currently selected provider ID
+     */
+    function updateProviderDropdownOptions_Reschedule(providers, currentSelection) {
+      var select = document.getElementById('rescheduleProvider');
+
+      // Clear cached slots and rebuild cache with new data
+      cachedProviderSlots_Reschedule = {};
+      providers.forEach(function(p) {
+        cachedProviderSlots_Reschedule[p.provider_id] = p.time_slots || [];
+      });
+
+      // Update each option (skip index 0 which is the placeholder "Select Provider")
+      for (var i = 1; i < select.options.length; i++) {
+        var option = select.options[i];
+        var providerId = option.value;
+
+        // Find matching provider data
+        var providerData = providers.find(function(p) {
+          return p.provider_id === providerId;
+        });
+
+        if (providerData) {
+          option.dataset.slotCount = providerData.slot_count.toString();
+          option.dataset.isReturning = providerData.is_returning_provider.toString();
+
+          var providerName = option.dataset.providerName;
+          var formattedText = formatProviderOption_Reschedule(
+            providerName,
+            providerData.slot_count,
+            providerData.is_returning_provider
+          );
+
+          option.textContent = formattedText;
+        }
+      }
+
+      // Restore previous selection if it exists
+      if (currentSelection) {
+        select.value = currentSelection;
+      }
+    }
+
+    /**
+     * Resets provider dropdown to show names without availability for reschedule
+     */
+    function resetProviderDropdown_Reschedule() {
+      var select = document.getElementById('rescheduleProvider');
+      var currentSelection = select.value;
+
+      // Clear cached slots
+      cachedProviderSlots_Reschedule = {};
+
+      // Reset each option to show name only
+      for (var i = 1; i < select.options.length; i++) {
+        var option = select.options[i];
+        var providerName = option.dataset.providerName;
+
+        if (providerName) {
+          option.dataset.slotCount = '-1';
+          option.dataset.isReturning = 'false';
+          option.textContent = providerName;
+        }
+      }
+
+      // Restore selection
+      if (currentSelection) {
+        select.value = currentSelection;
+      }
+    }
+
+    /**
+     * Handler for service selection change in reschedule view
+     */
+    function onServiceChange_Reschedule() {
+      updateProviderAvailability_Reschedule();
+      // Clear time slots when service changes
+      document.getElementById('timeSlotsContainer').innerHTML = '';
+      selectedTimeSlot = null;
+      document.getElementById('rescheduleSubmitBtn').disabled = true;
+    }
+
+    /**
+     * Handler for duration change in reschedule view
+     */
+    function onDurationChange_Reschedule() {
+      updateProviderAvailability_Reschedule();
+      // Clear time slots when duration changes
+      document.getElementById('timeSlotsContainer').innerHTML = '';
+      selectedTimeSlot = null;
+      document.getElementById('rescheduleSubmitBtn').disabled = true;
+    }
+
+    /**
+     * Handler for date change in reschedule view
+     */
+    function onDateChange_Reschedule() {
+      updateProviderAvailability_Reschedule();
+      // Clear time slots when date changes
+      document.getElementById('timeSlotsContainer').innerHTML = '';
+      selectedTimeSlot = null;
+      document.getElementById('rescheduleSubmitBtn').disabled = true;
+    }
+
+    /**
+     * Handler for provider selection change in reschedule view
+     * Displays cached time slots immediately (no backend call needed)
+     */
+    function onProviderChange_Reschedule() {
+      var providerSelect = document.getElementById('rescheduleProvider');
+      var providerId = providerSelect.value;
+
+      if (!providerId) {
+        document.getElementById('timeSlotsContainer').innerHTML = '';
+        selectedTimeSlot = null;
+        document.getElementById('rescheduleSubmitBtn').disabled = true;
+        return;
+      }
+
+      // Check cache for time slots (should always be available after updateProviderAvailability_Reschedule)
+      var slots = cachedProviderSlots_Reschedule[providerId];
+
+      if (slots === undefined) {
+        // Cache miss - fallback to backend
+        console.warn('Cache miss for provider ' + providerId + ', calling backend');
+        loadAvailableSlots();
+        return;
+      }
+
+      // Display cached slots immediately (no backend call!)
+      console.log('Displaying cached slots for provider ' + providerId + ': ' + slots.length + ' slots');
+      displayAvailableSlots(slots);
+      selectedTimeSlot = null;
+      document.getElementById('rescheduleSubmitBtn').disabled = true;
     }
 
     function submitReschedule() {

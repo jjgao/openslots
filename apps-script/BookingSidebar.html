@@ -207,13 +207,6 @@
       <div class="section-title">2. Appointment Details</div>
 
       <div class="form-group">
-        <label for="provider">Provider *</label>
-        <select id="provider" onchange="checkAvailability()">
-          <option value="">Select provider...</option>
-        </select>
-      </div>
-
-      <div class="form-group">
         <label for="service">Service *</label>
         <select id="service" onchange="onServiceChange()">
           <option value="">Select service...</option>
@@ -222,14 +215,21 @@
 
       <div class="form-group" id="durationGroup" class="hidden">
         <label for="duration">Duration *</label>
-        <select id="duration" onchange="checkAvailability()">
+        <select id="duration" onchange="onDurationChange()">
           <option value="">Select duration...</option>
         </select>
       </div>
 
       <div class="form-group">
         <label for="appointmentDate">Date *</label>
-        <input type="date" id="appointmentDate" onchange="checkAvailability()">
+        <input type="date" id="appointmentDate" onchange="onDateChange()">
+      </div>
+
+      <div class="form-group">
+        <label for="provider">Provider * <span id="providerAvailabilityLoading" class="loading" style="display: none; font-size: 0.9em; color: #666;">(checking availability...)</span></label>
+        <select id="provider" onchange="onProviderChange()">
+          <option value="">Select provider...</option>
+        </select>
       </div>
 
       <div class="form-group" id="timeSlotsGroup" class="hidden">
@@ -257,6 +257,7 @@
     var selectedClientId = null;
     var selectedTimeSlot = null;
     var formData = null;
+    var cachedProviderSlots = {};  // Cache time slots by provider_id
 
     // Load form data on page load
     google.script.run
@@ -275,7 +276,10 @@
       providers.forEach(function(p) {
         var option = document.createElement('option');
         option.value = p.provider_id;
-        option.textContent = p.name;
+        option.dataset.providerName = p.name; // Store original name
+        option.dataset.slotCount = '-1'; // Initialize (no availability data yet)
+        option.dataset.isReturning = 'false'; // Initialize (no returning indicator)
+        option.textContent = p.name; // Start with just name
         select.appendChild(option);
       });
     }
@@ -467,6 +471,7 @@
         durationGroup.classList.remove('hidden');
       }
 
+      updateProviderAvailability(); // Update provider availability when service changes
       checkAvailability();
     }
 
@@ -625,6 +630,233 @@
 
     function hideSuccess(elementId) {
       document.getElementById(elementId).classList.add('hidden');
+    }
+
+    // ========== Provider Availability Indicators ==========
+
+    /**
+     * Formats provider option text with availability and returning indicator
+     * @param {string} providerName - The provider's name
+     * @param {number} slotCount - Number of available slots (-1 = no data, 0 = unavailable, >0 = available)
+     * @param {boolean} isReturningProvider - True if this provider has served this client before
+     * @returns {string} Formatted text for dropdown option
+     */
+    function formatProviderOption(providerName, slotCount, isReturningProvider) {
+      var text = providerName;
+
+      // Add availability info if we have it
+      if (slotCount === 0) {
+        text += ' (No slots available)';
+      } else if (slotCount > 0) {
+        text += ' (' + slotCount + ' slot' + (slotCount === 1 ? '' : 's') + ' available)';
+      }
+      // If slotCount === -1, no availability info (show name only)
+
+      // Add returning indicator
+      if (isReturningProvider) {
+        text += ' ★ Returning';
+      }
+
+      return text;
+    }
+
+    /**
+     * Updates provider dropdown with availability indicators
+     * Triggered when service, duration, or date changes
+     */
+    function updateProviderAvailability() {
+      console.log('updateProviderAvailability() called');
+
+      var clientId = selectedClientId || null;
+      var serviceId = document.getElementById('service').value;
+      var duration = document.getElementById('duration').value;
+      var date = document.getElementById('appointmentDate').value;
+
+      console.log('Values:', { clientId: clientId, serviceId: serviceId, duration: duration, date: date });
+
+      // Need date and duration to calculate availability
+      if (!date || !duration) {
+        console.log('Missing date or duration, resetting dropdown');
+        resetProviderDropdown();
+        hideProviderAvailabilityLoading();
+        return;
+      }
+
+      var providerSelect = document.getElementById('provider');
+      var currentSelection = providerSelect.value;
+
+      // Show loading indicator
+      showProviderAvailabilityLoading();
+
+      console.log('Calling backend getAllProvidersAvailability...');
+
+      // Call backend to get availability for all providers
+      google.script.run
+        .withSuccessHandler(function(result) {
+          hideProviderAvailabilityLoading();
+          console.log('Backend response:', result);
+          if (result.success) {
+            updateProviderDropdownOptions(result.providers, currentSelection);
+          } else {
+            console.error('Error getting provider availability:', result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          hideProviderAvailabilityLoading();
+          console.error('Failed to get provider availability:', error);
+        })
+        .getAllProvidersAvailability(serviceId, date, parseInt(duration), clientId);
+    }
+
+    /**
+     * Shows the provider availability loading indicator
+     */
+    function showProviderAvailabilityLoading() {
+      var loadingIndicator = document.getElementById('providerAvailabilityLoading');
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'inline';
+      }
+    }
+
+    /**
+     * Hides the provider availability loading indicator
+     */
+    function hideProviderAvailabilityLoading() {
+      var loadingIndicator = document.getElementById('providerAvailabilityLoading');
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+      }
+    }
+
+    /**
+     * Updates provider dropdown options with availability counts and returning indicators
+     * Also caches time slots for instant display later
+     * @param {Array} providers - Array of provider data from backend
+     * @param {string} currentSelection - The currently selected provider ID
+     */
+    function updateProviderDropdownOptions(providers, currentSelection) {
+      console.log('updateProviderDropdownOptions() called with', providers.length, 'providers');
+
+      var select = document.getElementById('provider');
+
+      // Clear cached slots and rebuild cache with new data
+      cachedProviderSlots = {};
+      providers.forEach(function(p) {
+        cachedProviderSlots[p.provider_id] = p.time_slots || [];
+      });
+      console.log('Cached time slots for', Object.keys(cachedProviderSlots).length, 'providers');
+
+      // Update each option (skip index 0 which is the placeholder "Select provider...")
+      for (var i = 1; i < select.options.length; i++) {
+        var option = select.options[i];
+        var providerId = option.value;
+
+        // Find matching provider data
+        var providerData = providers.find(function(p) {
+          return p.provider_id === providerId;
+        });
+
+        if (providerData) {
+          console.log('Updating provider:', providerData.name, 'slots:', providerData.slot_count, 'returning:', providerData.is_returning_provider);
+
+          option.dataset.slotCount = providerData.slot_count.toString();
+          option.dataset.isReturning = providerData.is_returning_provider.toString();
+
+          var providerName = option.dataset.providerName;
+          var formattedText = formatProviderOption(
+            providerName,
+            providerData.slot_count,
+            providerData.is_returning_provider
+          );
+
+          console.log('Formatted text:', formattedText);
+          option.textContent = formattedText;
+        }
+      }
+
+      // Restore previous selection if it exists
+      if (currentSelection) {
+        select.value = currentSelection;
+      }
+
+      console.log('Provider dropdown updated successfully');
+    }
+
+    /**
+     * Resets provider dropdown to show names without availability
+     */
+    function resetProviderDropdown() {
+      var select = document.getElementById('provider');
+      var currentSelection = select.value;
+
+      // Clear cached slots
+      cachedProviderSlots = {};
+
+      // Reset each option to show name only
+      for (var i = 1; i < select.options.length; i++) {
+        var option = select.options[i];
+        var providerName = option.dataset.providerName;
+
+        if (providerName) {
+          option.dataset.slotCount = '-1';
+          option.dataset.isReturning = 'false';
+          option.textContent = providerName;
+        }
+      }
+
+      // Restore selection
+      if (currentSelection) {
+        select.value = currentSelection;
+      }
+    }
+
+    /**
+     * Handler for provider selection change
+     * Displays cached time slots immediately (no backend call needed)
+     */
+    function onProviderChange() {
+      var providerSelect = document.getElementById('provider');
+      var providerId = providerSelect.value;
+
+      if (!providerId) {
+        document.getElementById('timeSlotsGroup').classList.add('hidden');
+        selectedTimeSlot = null;
+        checkCanBook();
+        return;
+      }
+
+      // Check cache for time slots (should always be available after updateProviderAvailability)
+      var slots = cachedProviderSlots[providerId];
+
+      if (slots === undefined) {
+        // Cache miss - shouldn't happen in normal flow, but fallback to backend
+        console.warn('Cache miss for provider ' + providerId + ', calling backend');
+        checkAvailability();
+        return;
+      }
+
+      // Display cached slots immediately (no backend call!)
+      console.log('Displaying cached slots for provider ' + providerId + ': ' + slots.length + ' slots');
+      displayTimeSlots(slots);
+      document.getElementById('timeSlotsGroup').classList.remove('hidden');
+      selectedTimeSlot = null;
+      checkCanBook();
+    }
+
+    /**
+     * Handler for duration change
+     */
+    function onDurationChange() {
+      updateProviderAvailability(); // Update provider availability
+      checkAvailability(); // Fetch time slots
+    }
+
+    /**
+     * Handler for date change
+     */
+    function onDateChange() {
+      updateProviderAvailability(); // Update provider availability
+      checkAvailability(); // Fetch time slots
     }
   </script>
 </body>
