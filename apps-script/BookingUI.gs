@@ -28,6 +28,22 @@ function showAppointmentManagementSidebar() {
 }
 
 /**
+ * Shows the client management sidebar (placeholder)
+ * TODO: Implement full client management UI
+ */
+function showClientManagementSidebar() {
+  var ui = SpreadsheetApp.getUi();
+  ui.alert(
+    'Client Management',
+    'Client management features are currently available through:\\n\\n' +
+    '1. Book Appointment - Search and create clients\\n' +
+    '2. Clients sheet - View and edit client data directly\\n\\n' +
+    'A dedicated Client Management UI is planned for a future release.',
+    ui.ButtonSet.OK
+  );
+}
+
+/**
  * Gets data for booking form (providers, services)
  * @returns {Object} Form data with providers and services
  */

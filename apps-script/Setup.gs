@@ -683,7 +683,7 @@ function createActivityLogSheet() {
 
   // Add data validation
   addDropdownValidation(sheet, 'C2:C1000',
-    ['book', 'cancel', 'reschedule', 'check-in', 'no-show', 'complete', 'late', 'confirmation-call', 'confirmation-text', 'confirmation-email', 'calendar-create', 'calendar-update', 'calendar-delete'],
+    ['book', 'cancel', 'reschedule', 'check-in', 'no-show', 'complete', 'late', 'confirmation-call', 'confirmation-text', 'confirmation-email', 'calendar-create', 'calendar-update', 'calendar-delete', 'client-create', 'client-update'],
     'Select action type');  // action_type
 
   sheet.setColumnWidth(1, 100);  // log_id
